@@ -1,4 +1,4 @@
-This is quick hack job to make qdrant-client compatible with Python 3.13t (free-threaded)
+This is a quick hack job to make qdrant-client compatible with Python 3.13t (free-threaded)
 
 portalocker and grpcio have been removed, because they're not free-threaded compatible.
 
