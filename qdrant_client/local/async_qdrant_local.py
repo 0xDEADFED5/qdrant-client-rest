@@ -19,7 +19,7 @@ from io import TextIOWrapper
 from typing import Any, Generator, Iterable, Mapping, Optional, Sequence, Union, get_args
 from uuid import uuid4
 import numpy as np
-import portalocker
+# import portalocker
 from qdrant_client.common.client_warnings import show_warning, show_warning_once
 from qdrant_client._pydantic_compat import to_dict
 from qdrant_client.async_client_base import AsyncQdrantBase
@@ -83,7 +83,7 @@ class AsyncQdrantLocal(AsyncQdrantBase):
                 )
         try:
             if self._flock_file is not None and (not self._flock_file.closed):
-                portalocker.unlock(self._flock_file)
+                # portalocker.unlock(self._flock_file)
                 self._flock_file.close()
         except TypeError:
             pass
@@ -121,15 +121,15 @@ class AsyncQdrantLocal(AsyncQdrantBase):
             with open(lock_file_path, "w") as f:
                 f.write("tmp lock file")
         self._flock_file = open(lock_file_path, "r+")
-        try:
-            portalocker.lock(
-                self._flock_file,
-                portalocker.LockFlags.EXCLUSIVE | portalocker.LockFlags.NON_BLOCKING,
-            )
-        except portalocker.exceptions.LockException:
-            raise RuntimeError(
-                f"Storage folder {self.location} is already accessed by another instance of Qdrant client. If you require concurrent access, use Qdrant server instead."
-            )
+        # try:
+        #     portalocker.lock(
+        #         self._flock_file,
+        #         portalocker.LockFlags.EXCLUSIVE | portalocker.LockFlags.NON_BLOCKING,
+        #     )
+        # except portalocker.exceptions.LockException:
+        #     raise RuntimeError(
+        #         f"Storage folder {self.location} is already accessed by another instance of Qdrant client. If you require concurrent access, use Qdrant server instead."
+        #     )
 
     def _save(self) -> None:
         if not self.persistent:

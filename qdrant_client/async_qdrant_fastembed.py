@@ -15,13 +15,15 @@ from typing import Any, Iterable, Optional, Sequence, Union, get_args
 from copy import deepcopy
 import numpy as np
 from pydantic import BaseModel
-from qdrant_client import grpc
+
+# from qdrant_client import grpc
 from qdrant_client.common.client_warnings import show_warning
 from qdrant_client.async_client_base import AsyncQdrantBase
 from qdrant_client.embed.model_embedder import ModelEmbedder
 from qdrant_client.http import models
 from qdrant_client.conversions import common_types as types
-from qdrant_client.conversions.conversion import GrpcToRest
+
+# from qdrant_client.conversions.conversion import GrpcToRest
 from qdrant_client.embed.common import INFERENCE_OBJECT_TYPES
 from qdrant_client.embed.schema_parser import ModelSchemaParser
 from qdrant_client.hybrid.fusion import reciprocal_rank_fusion
@@ -195,9 +197,7 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
         if model_name in _IMAGE_EMBEDDING_MODELS:
             return _IMAGE_EMBEDDING_MODELS[model_name]
         if model_name in SUPPORTED_SPARSE_EMBEDDING_MODELS:
-            raise ValueError(
-                "Sparse embeddings do not return fixed embedding size and distance type"
-            )
+            raise ValueError("Sparse embeddings do not return fixed embedding size and distance type")
         raise ValueError(f"Unsupported embedding model: {model_name}")
 
     def _get_or_init_model(
@@ -283,17 +283,11 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
         embedding_model = self._get_or_init_model(model_name=embedding_model_name, deprecated=True)
         (documents_a, documents_b) = tee(documents, 2)
         if embed_type == "passage":
-            vectors_iter = embedding_model.passage_embed(
-                documents_a, batch_size=batch_size, parallel=parallel
-            )
+            vectors_iter = embedding_model.passage_embed(documents_a, batch_size=batch_size, parallel=parallel)
         elif embed_type == "query":
-            vectors_iter = (
-                list(embedding_model.query_embed(query=query))[0] for query in documents_a
-            )
+            vectors_iter = (list(embedding_model.query_embed(query=query))[0] for query in documents_a)
         elif embed_type == "default":
-            vectors_iter = embedding_model.embed(
-                documents_a, batch_size=batch_size, parallel=parallel
-            )
+            vectors_iter = embedding_model.embed(documents_a, batch_size=batch_size, parallel=parallel)
         else:
             raise ValueError(f"Unknown embed type: {embed_type}")
         for vector, doc in zip(vectors_iter, documents_b):
@@ -306,16 +300,10 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
         batch_size: int = 32,
         parallel: Optional[int] = None,
     ) -> Iterable[types.SparseVector]:
-        sparse_embedding_model = self._get_or_init_sparse_model(
-            model_name=embedding_model_name, deprecated=True
-        )
-        vectors_iter = sparse_embedding_model.embed(
-            documents, batch_size=batch_size, parallel=parallel
-        )
+        sparse_embedding_model = self._get_or_init_sparse_model(model_name=embedding_model_name, deprecated=True)
+        vectors_iter = sparse_embedding_model.embed(documents, batch_size=batch_size, parallel=parallel)
         for sparse_vector in vectors_iter:
-            yield types.SparseVector(
-                indices=sparse_vector.indices.tolist(), values=sparse_vector.values.tolist()
-            )
+            yield types.SparseVector(indices=sparse_vector.indices.tolist(), values=sparse_vector.values.tolist())
 
     def get_vector_field_name(self) -> str:
         """
@@ -337,24 +325,16 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
             return f"fast-sparse-{model_name}"
         return None
 
-    def _scored_points_to_query_responses(
-        self, scored_points: list[types.ScoredPoint]
-    ) -> list[QueryResponse]:
+    def _scored_points_to_query_responses(self, scored_points: list[types.ScoredPoint]) -> list[QueryResponse]:
         response = []
         vector_field_name = self.get_vector_field_name()
         sparse_vector_field_name = self.get_sparse_vector_field_name()
         for scored_point in scored_points:
-            embedding = (
-                scored_point.vector.get(vector_field_name, None)
-                if isinstance(scored_point.vector, dict)
-                else None
-            )
+            embedding = scored_point.vector.get(vector_field_name, None) if isinstance(scored_point.vector, dict) else None
             sparse_embedding = None
             if sparse_vector_field_name is not None:
                 sparse_embedding = (
-                    scored_point.vector.get(sparse_vector_field_name, None)
-                    if isinstance(scored_point.vector, dict)
-                    else None
+                    scored_point.vector.get(sparse_vector_field_name, None) if isinstance(scored_point.vector, dict) else None
                 )
             response.append(
                 QueryResponse(
@@ -384,9 +364,7 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
             sparse_vectors = iter(lambda: None, True)
         vector_name = self.get_vector_field_name()
         sparse_vector_name = self.get_sparse_vector_field_name()
-        for idx, meta, (doc, vector), sparse_vector in zip(
-            ids, metadata, encoded_docs, sparse_vectors
-        ):
+        for idx, meta, (doc, vector), sparse_vector in zip(ids, metadata, encoded_docs, sparse_vectors):
             ids_accumulator.append(idx)
             payload = {"document": doc, **meta}
             point_vector: dict[str, models.Vector] = {vector_name: vector}
@@ -404,21 +382,15 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
             vector_field_name in collection_info.config.params.vectors
         ), f"Collection have incompatible vector params: {collection_info.config.params.vectors}, expected {vector_field_name}"
         vector_params = collection_info.config.params.vectors[vector_field_name]
-        assert (
-            embeddings_size == vector_params.size
-        ), f"Embedding size mismatch: {embeddings_size} != {vector_params.size}"
-        assert (
-            distance == vector_params.distance
-        ), f"Distance mismatch: {distance} != {vector_params.distance}"
+        assert embeddings_size == vector_params.size, f"Embedding size mismatch: {embeddings_size} != {vector_params.size}"
+        assert distance == vector_params.distance, f"Distance mismatch: {distance} != {vector_params.distance}"
         sparse_vector_field_name = self.get_sparse_vector_field_name()
         if sparse_vector_field_name is not None:
             assert (
                 sparse_vector_field_name in collection_info.config.params.sparse_vectors
             ), f"Collection have incompatible vector params: {collection_info.config.params.vectors}"
             if self.sparse_embedding_model_name in IDF_EMBEDDING_MODELS:
-                modifier = collection_info.config.params.sparse_vectors[
-                    sparse_vector_field_name
-                ].modifier
+                modifier = collection_info.config.params.sparse_vectors[sparse_vector_field_name].modifier
                 assert (
                     modifier == models.Modifier.IDF
                 ), f"{self.sparse_embedding_model_name} requires modifier IDF, current modifier is {modifier}"
@@ -435,9 +407,7 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
         """
         model_name = model_name or self.embedding_model_name
         if model_name in SUPPORTED_SPARSE_EMBEDDING_MODELS:
-            raise ValueError(
-                f"Sparse embeddings do not have a fixed embedding size. Current model: {model_name}"
-            )
+            raise ValueError(f"Sparse embeddings do not have a fixed embedding size. Current model: {model_name}")
         (embeddings_size, _) = self._get_model_params(model_name=model_name)
         return embeddings_size
 
@@ -487,11 +457,7 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
             modifier = models.Modifier.IDF if modifier is None else modifier
         if vector_field_name is None:
             return None
-        return {
-            vector_field_name: models.SparseVectorParams(
-                index=models.SparseIndexParams(on_disk=on_disk), modifier=modifier
-            )
-        }
+        return {vector_field_name: models.SparseVectorParams(index=models.SparseIndexParams(on_disk=on_disk), modifier=modifier)}
 
     async def add(
         self,
@@ -605,31 +571,23 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
             list[types.ScoredPoint]: List of scored points.
 
         """
-        embedding_model_inst = self._get_or_init_model(
-            model_name=self.embedding_model_name, deprecated=True
-        )
+        embedding_model_inst = self._get_or_init_model(model_name=self.embedding_model_name, deprecated=True)
         embeddings = list(embedding_model_inst.query_embed(query=query_text))
         query_vector = embeddings[0].tolist()
         if self.sparse_embedding_model_name is None:
             return self._scored_points_to_query_responses(
                 await self.search(
                     collection_name=collection_name,
-                    query_vector=models.NamedVector(
-                        name=self.get_vector_field_name(), vector=query_vector
-                    ),
+                    query_vector=models.NamedVector(name=self.get_vector_field_name(), vector=query_vector),
                     query_filter=query_filter,
                     limit=limit,
                     with_payload=True,
                     **kwargs,
                 )
             )
-        sparse_embedding_model_inst = self._get_or_init_sparse_model(
-            model_name=self.sparse_embedding_model_name, deprecated=True
-        )
+        sparse_embedding_model_inst = self._get_or_init_sparse_model(model_name=self.sparse_embedding_model_name, deprecated=True)
         sparse_vector = list(sparse_embedding_model_inst.query_embed(query=query_text))[0]
-        sparse_query_vector = models.SparseVector(
-            indices=sparse_vector.indices.tolist(), values=sparse_vector.values.tolist()
-        )
+        sparse_query_vector = models.SparseVector(indices=sparse_vector.indices.tolist(), values=sparse_vector.values.tolist())
         dense_request = models.SearchRequest(
             vector=models.NamedVector(name=self.get_vector_field_name(), vector=query_vector),
             filter=query_filter,
@@ -638,9 +596,7 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
             **kwargs,
         )
         sparse_request = models.SearchRequest(
-            vector=models.NamedSparseVector(
-                name=self.get_sparse_vector_field_name(), vector=sparse_query_vector
-            ),
+            vector=models.NamedSparseVector(name=self.get_sparse_vector_field_name(), vector=sparse_query_vector),
             filter=query_filter,
             limit=limit,
             with_payload=True,
@@ -681,16 +637,12 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
             list[list[QueryResponse]]: List of lists of responses for each query text.
 
         """
-        embedding_model_inst = self._get_or_init_model(
-            model_name=self.embedding_model_name, deprecated=True
-        )
+        embedding_model_inst = self._get_or_init_model(model_name=self.embedding_model_name, deprecated=True)
         query_vectors = list(embedding_model_inst.query_embed(query=query_texts))
         requests = []
         for vector in query_vectors:
             request = models.SearchRequest(
-                vector=models.NamedVector(
-                    name=self.get_vector_field_name(), vector=vector.tolist()
-                ),
+                vector=models.NamedVector(name=self.get_vector_field_name(), vector=vector.tolist()),
                 filter=query_filter,
                 limit=limit,
                 with_payload=True,
@@ -700,20 +652,14 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
         if self.sparse_embedding_model_name is None:
             responses = await self.search_batch(collection_name=collection_name, requests=requests)
             return [self._scored_points_to_query_responses(response) for response in responses]
-        sparse_embedding_model_inst = self._get_or_init_sparse_model(
-            model_name=self.sparse_embedding_model_name, deprecated=True
-        )
+        sparse_embedding_model_inst = self._get_or_init_sparse_model(model_name=self.sparse_embedding_model_name, deprecated=True)
         sparse_query_vectors = [
-            models.SparseVector(
-                indices=sparse_vector.indices.tolist(), values=sparse_vector.values.tolist()
-            )
+            models.SparseVector(indices=sparse_vector.indices.tolist(), values=sparse_vector.values.tolist())
             for sparse_vector in sparse_embedding_model_inst.embed(documents=query_texts)
         ]
         for sparse_vector in sparse_query_vectors:
             request = models.SearchRequest(
-                vector=models.NamedSparseVector(
-                    name=self.get_sparse_vector_field_name(), vector=sparse_vector
-                ),
+                vector=models.NamedSparseVector(name=self.get_sparse_vector_field_name(), vector=sparse_vector),
                 filter=query_filter,
                 limit=limit,
                 with_payload=True,
@@ -756,8 +702,8 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
         Raises:
             ValueError: if query is not of supported type
         """
-        if isinstance(query, get_args(types.Query)) or isinstance(query, grpc.Query):
-            return query
+        # if isinstance(query, get_args(types.Query)) or isinstance(query, grpc.Query):
+        #     return query
         if isinstance(query, types.SparseVector):
             return models.NearestQuery(nearest=query)
         if isinstance(query, np.ndarray):
@@ -765,9 +711,9 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
         if isinstance(query, list):
             return models.NearestQuery(nearest=query)
         if isinstance(query, get_args(types.PointId)):
-            query = (
-                GrpcToRest.convert_point_id(query) if isinstance(query, grpc.PointId) else query
-            )
+            # query = (
+            #     GrpcToRest.convert_point_id(query) if isinstance(query, grpc.PointId) else query
+            # )
             return models.NearestQuery(nearest=query)
         if isinstance(query, get_args(INFERENCE_OBJECT_TYPES)):
             return models.NearestQuery(nearest=query)
@@ -788,9 +734,7 @@ class AsyncQdrantFastembedMixin(AsyncQdrantBase):
         query.query = self._resolve_query(query.query)
         return query
 
-    def _resolve_query_batch_request(
-        self, requests: Sequence[models.QueryRequest]
-    ) -> Sequence[models.QueryRequest]:
+    def _resolve_query_batch_request(self, requests: Sequence[models.QueryRequest]) -> Sequence[models.QueryRequest]:
         """Resolve query field for each query request in a batch
 
         Args:

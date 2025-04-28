@@ -13,7 +13,7 @@ from typing import (
 
 import numpy as np
 
-from qdrant_client import grpc as grpc
+# from qdrant_client import grpc as grpc
 from qdrant_client.client_base import QdrantBase
 from qdrant_client.common.client_warnings import show_warning_once
 from qdrant_client.conversions import common_types as types
@@ -93,9 +93,7 @@ class QdrantClient(QdrantFastembedMixin):
         path: Optional[str] = None,
         force_disable_check_same_thread: bool = False,
         grpc_options: Optional[dict[str, Any]] = None,
-        auth_token_provider: Optional[
-            Union[Callable[[], str], Callable[[], Awaitable[str]]]
-        ] = None,
+        auth_token_provider: Optional[Union[Callable[[], str], Callable[[], Awaitable[str]]]] = None,
         cloud_inference: bool = False,
         local_inference_batch_size: Optional[int] = None,
         check_compatibility: bool = True,
@@ -110,19 +108,13 @@ class QdrantClient(QdrantFastembedMixin):
 
         # Saving the init options to facilitate building AsyncQdrantClient from QdrantClient and vice versa.
         # Eg. AsyncQdrantClient(**sync_client.init_options) or QdrantClient(**async_client.init_options)
-        self._init_options = {
-            key: value
-            for key, value in locals().items()
-            if key not in ("self", "__class__", "kwargs")
-        }
+        self._init_options = {key: value for key, value in locals().items() if key not in ("self", "__class__", "kwargs")}
         self._init_options.update(deepcopy(kwargs))
 
         self._client: QdrantBase
 
         if sum([param is not None for param in (location, url, host, path)]) > 1:
-            raise ValueError(
-                "Only one of <location>, <url>, <host> or <path> should be specified."
-            )
+            raise ValueError("Only one of <location>, <url>, <host> or <path> should be specified.")
 
         if location == ":memory:":
             self._client = QdrantLocal(
@@ -172,29 +164,29 @@ class QdrantClient(QdrantFastembedMixin):
         if hasattr(self, "_client"):
             self._client.close(grpc_grace=grpc_grace, **kwargs)
 
-    @property
-    def grpc_collections(self) -> grpc.CollectionsStub:
-        """gRPC client for collections methods
+    # @property
+    # def grpc_collections(self) -> grpc.CollectionsStub:
+    #     """gRPC client for collections methods
 
-        Returns:
-            An instance of raw gRPC client, generated from Protobuf
-        """
-        if isinstance(self._client, QdrantRemote):
-            return self._client.grpc_collections
+    #     Returns:
+    #         An instance of raw gRPC client, generated from Protobuf
+    #     """
+    #     if isinstance(self._client, QdrantRemote):
+    #         return self._client.grpc_collections
 
-        raise NotImplementedError(f"gRPC client is not supported for {type(self._client)}")
+    #     raise NotImplementedError(f"gRPC client is not supported for {type(self._client)}")
 
-    @property
-    def grpc_points(self) -> grpc.PointsStub:
-        """gRPC client for points methods
+    # @property
+    # def grpc_points(self) -> grpc.PointsStub:
+    #     """gRPC client for points methods
 
-        Returns:
-            An instance of raw gRPC client, generated from Protobuf
-        """
-        if isinstance(self._client, QdrantRemote):
-            return self._client.grpc_points
+    #     Returns:
+    #         An instance of raw gRPC client, generated from Protobuf
+    #     """
+    #     if isinstance(self._client, QdrantRemote):
+    #         return self._client.grpc_points
 
-        raise NotImplementedError(f"gRPC client is not supported for {type(self._client)}")
+    #     raise NotImplementedError(f"gRPC client is not supported for {type(self._client)}")
 
     @property
     def rest(self) -> SyncApis[ApiClient]:
@@ -262,8 +254,7 @@ class QdrantClient(QdrantFastembedMixin):
         """
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
         warnings.warn(
-            "`search_batch` method is deprecated and will be removed in the future."
-            " Use `query_batch_points` instead.",
+            "`search_batch` method is deprecated and will be removed in the future." " Use `query_batch_points` instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -369,8 +360,7 @@ class QdrantClient(QdrantFastembedMixin):
         """
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
         warnings.warn(
-            "`search` method is deprecated and will be removed in the future."
-            " Use `query_points` instead.",
+            "`search` method is deprecated and will be removed in the future." " Use `query_points` instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -422,11 +412,7 @@ class QdrantClient(QdrantFastembedMixin):
         requests = self._resolve_query_batch_request(requests)
         requires_inference = self._inference_inspector.inspect(requests)
         if requires_inference and not self.cloud_inference:
-            requests = list(
-                self._embed_models(
-                    requests, is_query=True, batch_size=self.local_inference_batch_size
-                )
-            )
+            requests = list(self._embed_models(requests, is_query=True, batch_size=self.local_inference_batch_size))
 
         return self._client.query_batch_points(
             collection_name=collection_name,
@@ -561,31 +547,15 @@ class QdrantClient(QdrantFastembedMixin):
             requires_inference = self._inference_inspector.inspect(prefetch)
         if requires_inference and not self.cloud_inference:
             query = (
-                next(
-                    iter(
-                        self._embed_models(
-                            query, is_query=True, batch_size=self.local_inference_batch_size
-                        )
-                    )
-                )
+                next(iter(self._embed_models(query, is_query=True, batch_size=self.local_inference_batch_size)))
                 if query is not None
                 else None
             )
             if isinstance(prefetch, list):
-                prefetch = list(
-                    self._embed_models(
-                        prefetch, is_query=True, batch_size=self.local_inference_batch_size
-                    )
-                )
+                prefetch = list(self._embed_models(prefetch, is_query=True, batch_size=self.local_inference_batch_size))
             else:
                 prefetch = (
-                    next(
-                        iter(
-                            self._embed_models(
-                                prefetch, is_query=True, batch_size=self.local_inference_batch_size
-                            )
-                        )
-                    )
+                    next(iter(self._embed_models(prefetch, is_query=True, batch_size=self.local_inference_batch_size)))
                     if prefetch is not None
                     else None
                 )
@@ -732,30 +702,14 @@ class QdrantClient(QdrantFastembedMixin):
             requires_inference = self._inference_inspector.inspect(prefetch)
         if requires_inference and not self.cloud_inference:
             query = (
-                next(
-                    iter(
-                        self._embed_models(
-                            query, is_query=True, batch_size=self.local_inference_batch_size
-                        )
-                    )
-                )
+                next(iter(self._embed_models(query, is_query=True, batch_size=self.local_inference_batch_size)))
                 if query is not None
                 else None
             )
             if isinstance(prefetch, list):
-                prefetch = list(
-                    self._embed_models(
-                        prefetch, is_query=True, batch_size=self.local_inference_batch_size
-                    )
-                )
+                prefetch = list(self._embed_models(prefetch, is_query=True, batch_size=self.local_inference_batch_size))
             elif prefetch is not None:
-                prefetch = next(
-                    iter(
-                        self._embed_models(
-                            prefetch, is_query=True, batch_size=self.local_inference_batch_size
-                        )
-                    )
-                )
+                prefetch = next(iter(self._embed_models(prefetch, is_query=True, batch_size=self.local_inference_batch_size)))
 
         return self._client.query_points_groups(
             collection_name=collection_name,
@@ -861,8 +815,7 @@ class QdrantClient(QdrantFastembedMixin):
         """
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
         warnings.warn(
-            "`search_groups` method is deprecated and will be removed in the future."
-            " Use `query_points_groups` instead.",
+            "`search_groups` method is deprecated and will be removed in the future." " Use `query_points_groups` instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -912,8 +865,7 @@ class QdrantClient(QdrantFastembedMixin):
         """
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
         warnings.warn(
-            "`recommend_batch` method is deprecated and will be removed in the future."
-            " Use `query_batch_points` instead.",
+            "`recommend_batch` method is deprecated and will be removed in the future." " Use `query_batch_points` instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -1020,8 +972,7 @@ class QdrantClient(QdrantFastembedMixin):
         """
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
         warnings.warn(
-            "`recommend` method is deprecated and will be removed in the future."
-            " Use `query_points` instead.",
+            "`recommend` method is deprecated and will be removed in the future." " Use `query_points` instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -1247,8 +1198,7 @@ class QdrantClient(QdrantFastembedMixin):
         """
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
         warnings.warn(
-            "`recommend_groups` method is deprecated and will be removed in the future."
-            " Use `query_points_groups` instead.",
+            "`recommend_groups` method is deprecated and will be removed in the future." " Use `query_points_groups` instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -1355,8 +1305,7 @@ class QdrantClient(QdrantFastembedMixin):
             List of discovered points with discovery or context scores, accordingly.
         """
         warnings.warn(
-            "`discover` method is deprecated and will be removed in the future."
-            " Use `query_points` instead.",
+            "`discover` method is deprecated and will be removed in the future." " Use `query_points` instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -1387,8 +1336,7 @@ class QdrantClient(QdrantFastembedMixin):
         **kwargs: Any,
     ) -> list[list[types.ScoredPoint]]:
         warnings.warn(
-            "`discover_batch` method is deprecated and will be removed in the future."
-            " Use `query_batch_points` instead.",
+            "`discover_batch` method is deprecated and will be removed in the future." " Use `query_batch_points` instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -1599,38 +1547,28 @@ class QdrantClient(QdrantFastembedMixin):
         """
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
 
-        if (
-            not isinstance(points, types.Batch)
-            and len(points) > 0
-            and isinstance(points[0], grpc.PointStruct)
-        ):
-            # gRPC structures won't support local inference feature, so we deprecated it
-            show_warning_once(
-                message="""
-            Usage of `grpc.PointStruct` is deprecated. Please use `models.PointStruct` instead.
-            """,
-                category=DeprecationWarning,
-                idx="grpc-input",
-                stacklevel=4,
-            )
+        # if (
+        #     not isinstance(points, types.Batch)
+        #     and len(points) > 0
+        #     and isinstance(points[0], grpc.PointStruct)
+        # ):
+        #     # gRPC structures won't support local inference feature, so we deprecated it
+        #     show_warning_once(
+        #         message="""
+        #     Usage of `grpc.PointStruct` is deprecated. Please use `models.PointStruct` instead.
+        #     """,
+        #         category=DeprecationWarning,
+        #         idx="grpc-input",
+        #         stacklevel=4,
+        #     )
 
         requires_inference = self._inference_inspector.inspect(points)
 
         if requires_inference and not self.cloud_inference:
             if isinstance(points, types.Batch):
-                points = next(
-                    iter(
-                        self._embed_models(
-                            points, is_query=False, batch_size=self.local_inference_batch_size
-                        )
-                    )
-                )
+                points = next(iter(self._embed_models(points, is_query=False, batch_size=self.local_inference_batch_size)))
             else:
-                points = list(
-                    self._embed_models(
-                        points, is_query=False, batch_size=self.local_inference_batch_size
-                    )
-                )
+                points = list(self._embed_models(points, is_query=False, batch_size=self.local_inference_batch_size))
 
         return self._client.upsert(
             collection_name=collection_name,
@@ -1683,11 +1621,7 @@ class QdrantClient(QdrantFastembedMixin):
 
         requires_inference = self._inference_inspector.inspect(points)
         if requires_inference and not self.cloud_inference:
-            points = list(
-                self._embed_models(
-                    points, is_query=False, batch_size=self.local_inference_batch_size
-                )
-            )
+            points = list(self._embed_models(points, is_query=False, batch_size=self.local_inference_batch_size))
 
         return self._client.update_vectors(
             collection_name=collection_name,
@@ -2138,9 +2072,7 @@ class QdrantClient(QdrantFastembedMixin):
         requires_inference = self._inference_inspector.inspect(update_operations)
         if requires_inference and not self.cloud_inference:
             update_operations = list(
-                self._embed_models(
-                    update_operations, is_query=False, batch_size=self.local_inference_batch_size
-                )
+                self._embed_models(update_operations, is_query=False, batch_size=self.local_inference_batch_size)
             )
 
         return self._client.batch_update_points(
@@ -2178,9 +2110,7 @@ class QdrantClient(QdrantFastembedMixin):
             **kwargs,
         )
 
-    def get_collection_aliases(
-        self, collection_name: str, **kwargs: Any
-    ) -> types.CollectionsAliasesResponse:
+    def get_collection_aliases(self, collection_name: str, **kwargs: Any) -> types.CollectionsAliasesResponse:
         """Get collection aliases
 
         Args:
@@ -2270,9 +2200,7 @@ class QdrantClient(QdrantFastembedMixin):
             Operation result
         """
         if "optimizer_config" in kwargs and optimizers_config is not None:
-            raise ValueError(
-                "Only one of optimizer_config and optimizers_config should be specified"
-            )
+            raise ValueError("Only one of optimizer_config and optimizers_config should be specified")
 
         if "optimizer_config" in kwargs:
             optimizers_config = kwargs.pop("optimizer_config")
@@ -2292,9 +2220,7 @@ class QdrantClient(QdrantFastembedMixin):
             **kwargs,
         )
 
-    def delete_collection(
-        self, collection_name: str, timeout: Optional[int] = None, **kwargs: Any
-    ) -> bool:
+    def delete_collection(self, collection_name: str, timeout: Optional[int] = None, **kwargs: Any) -> bool:
         """Removes collection and all it's data
 
         Args:
@@ -2308,16 +2234,12 @@ class QdrantClient(QdrantFastembedMixin):
         """
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
 
-        return self._client.delete_collection(
-            collection_name=collection_name, timeout=timeout, **kwargs
-        )
+        return self._client.delete_collection(collection_name=collection_name, timeout=timeout, **kwargs)
 
     def create_collection(
         self,
         collection_name: str,
-        vectors_config: Optional[
-            Union[types.VectorParams, Mapping[str, types.VectorParams]]
-        ] = None,
+        vectors_config: Optional[Union[types.VectorParams, Mapping[str, types.VectorParams]]] = None,
         sparse_vectors_config: Optional[Mapping[str, types.SparseVectorParams]] = None,
         shard_number: Optional[int] = None,
         sharding_method: Optional[types.ShardingMethod] = None,
@@ -2606,9 +2528,7 @@ class QdrantClient(QdrantFastembedMixin):
                 points = []
 
             if requires_inference:
-                points = self._embed_models_strict(
-                    points, parallel=parallel, batch_size=self.local_inference_batch_size
-                )
+                points = self._embed_models_strict(points, parallel=parallel, batch_size=self.local_inference_batch_size)
 
         return self._client.upload_points(
             collection_name=collection_name,
@@ -2682,9 +2602,7 @@ class QdrantClient(QdrantFastembedMixin):
                     vectors = []
 
                 if requires_inference:
-                    vectors = self._embed_models_strict(
-                        vectors, parallel=parallel, batch_size=self.local_inference_batch_size
-                    )
+                    vectors = self._embed_models_strict(vectors, parallel=parallel, batch_size=self.local_inference_batch_size)
 
         return self._client.upload_collection(
             collection_name=collection_name,
@@ -2778,9 +2696,7 @@ class QdrantClient(QdrantFastembedMixin):
             **kwargs,
         )
 
-    def list_snapshots(
-        self, collection_name: str, **kwargs: Any
-    ) -> list[types.SnapshotDescription]:
+    def list_snapshots(self, collection_name: str, **kwargs: Any) -> list[types.SnapshotDescription]:
         """List all snapshots for a given collection.
 
         Args:
@@ -2793,9 +2709,7 @@ class QdrantClient(QdrantFastembedMixin):
 
         return self._client.list_snapshots(collection_name=collection_name, **kwargs)
 
-    def create_snapshot(
-        self, collection_name: str, wait: bool = True, **kwargs: Any
-    ) -> Optional[types.SnapshotDescription]:
+    def create_snapshot(self, collection_name: str, wait: bool = True, **kwargs: Any) -> Optional[types.SnapshotDescription]:
         """Create snapshot for a given collection.
 
         Args:
@@ -2812,9 +2726,7 @@ class QdrantClient(QdrantFastembedMixin):
 
         return self._client.create_snapshot(collection_name=collection_name, wait=wait, **kwargs)
 
-    def delete_snapshot(
-        self, collection_name: str, snapshot_name: str, wait: bool = True, **kwargs: Any
-    ) -> Optional[bool]:
+    def delete_snapshot(self, collection_name: str, snapshot_name: str, wait: bool = True, **kwargs: Any) -> Optional[bool]:
         """Delete snapshot for a given collection.
 
         Args:
@@ -2847,9 +2759,7 @@ class QdrantClient(QdrantFastembedMixin):
 
         return self._client.list_full_snapshots(**kwargs)
 
-    def create_full_snapshot(
-        self, wait: bool = True, **kwargs: Any
-    ) -> Optional[types.SnapshotDescription]:
+    def create_full_snapshot(self, wait: bool = True, **kwargs: Any) -> Optional[types.SnapshotDescription]:
         """Create snapshot for a whole storage.
 
         Args:
@@ -2865,9 +2775,7 @@ class QdrantClient(QdrantFastembedMixin):
 
         return self._client.create_full_snapshot(wait=wait, **kwargs)
 
-    def delete_full_snapshot(
-        self, snapshot_name: str, wait: bool = True, **kwargs: Any
-    ) -> Optional[bool]:
+    def delete_full_snapshot(self, snapshot_name: str, wait: bool = True, **kwargs: Any) -> Optional[bool]:
         """Delete snapshot for a whole storage.
 
         Args:
@@ -2933,9 +2841,7 @@ class QdrantClient(QdrantFastembedMixin):
             **kwargs,
         )
 
-    def list_shard_snapshots(
-        self, collection_name: str, shard_id: int, **kwargs: Any
-    ) -> list[types.SnapshotDescription]:
+    def list_shard_snapshots(self, collection_name: str, shard_id: int, **kwargs: Any) -> list[types.SnapshotDescription]:
         """List all snapshots of a given shard
 
         Args:

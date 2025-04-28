@@ -15,12 +15,13 @@ import warnings
 
 import numpy as np
 
-from qdrant_client import grpc as grpc
+# from qdrant_client import grpc as grpc
 from qdrant_client.common.client_warnings import show_warning_once
 from qdrant_client._pydantic_compat import construct, to_jsonable_python as _to_jsonable_python
 from qdrant_client.conversions import common_types as types
 from qdrant_client.conversions.common_types import get_args_subscribed
-from qdrant_client.conversions.conversion import GrpcToRest
+
+# from qdrant_client.conversions.conversion import GrpcToRest
 from qdrant_client.http import models
 from qdrant_client.http.models import ScoredPoint
 from qdrant_client.http.models.models import Distance, ExtendedPointId, SparseVector, OrderValue
@@ -109,35 +110,20 @@ class LocalCollection:
             location: path to the collection directory. If None, the collection will be created in memory.
             force_disable_check_same_thread: force disable check_same_thread for sqlite3 connection. default: False
         """
-        self.vectors_config, self.multivectors_config = self._resolve_vectors_config(
-            config.vectors
-        )
+        self.vectors_config, self.multivectors_config = self._resolve_vectors_config(config.vectors)
         sparse_vectors_config = config.sparse_vectors
         self.vectors: dict[str, types.NumpyArray] = {
-            name: np.zeros((0, params.size), dtype=np.float32)
-            for name, params in self.vectors_config.items()
+            name: np.zeros((0, params.size), dtype=np.float32) for name, params in self.vectors_config.items()
         }
         self.sparse_vectors: dict[str, list[SparseVector]] = (
-            {name: [] for name, params in sparse_vectors_config.items()}
-            if sparse_vectors_config is not None
-            else {}
+            {name: [] for name, params in sparse_vectors_config.items()} if sparse_vectors_config is not None else {}
         )
-        self.sparse_vectors_idf: dict[
-            str, dict[int, int]
-        ] = {}  # vector_name: {idx_in_vocab: doc frequency}
-        self.multivectors: dict[str, list[types.NumpyArray]] = {
-            name: [] for name in self.multivectors_config
-        }
+        self.sparse_vectors_idf: dict[str, dict[int, int]] = {}  # vector_name: {idx_in_vocab: doc frequency}
+        self.multivectors: dict[str, list[types.NumpyArray]] = {name: [] for name in self.multivectors_config}
         self.payload: list[models.Payload] = []
         self.deleted: types.NumpyArray = np.zeros(0, dtype=bool)
-        self._all_vectors_keys = (
-            list(self.vectors.keys())
-            + list(self.sparse_vectors.keys())
-            + list(self.multivectors.keys())
-        )
-        self.deleted_per_vector: dict[str, types.NumpyArray] = {
-            name: np.zeros(0, dtype=bool) for name in self._all_vectors_keys
-        }
+        self._all_vectors_keys = list(self.vectors.keys()) + list(self.sparse_vectors.keys()) + list(self.multivectors.keys())
+        self.deleted_per_vector: dict[str, types.NumpyArray] = {name: np.zeros(0, dtype=bool) for name in self._all_vectors_keys}
         self.ids: dict[models.ExtendedPointId, int] = {}  # Mapping from external id to internal id
         self.ids_inv: list[models.ExtendedPointId] = []  # Mapping from internal id to external id
         self.persistent = location is not None
@@ -231,9 +217,7 @@ class LocalCollection:
                     if v is not None:
                         vectors[name].append(v)
                     else:
-                        vectors[name].append(
-                            np.ones(self.vectors_config[name].size, dtype=np.float32)
-                        )
+                        vectors[name].append(np.ones(self.vectors_config[name].size, dtype=np.float32))
                         deleted_ids.append((idx, name))
 
                 # handle sparse vectors
@@ -296,9 +280,7 @@ class LocalCollection:
             tuple[str, MultiQueryVector],
             types.NumpyArray,
         ],
-    ) -> tuple[
-        str, Union[DenseQueryVector, SparseQueryVector, MultiQueryVector, types.NumpyArray]
-    ]:
+    ) -> tuple[str, Union[DenseQueryVector, SparseQueryVector, MultiQueryVector, types.NumpyArray]]:
         # SparseQueryVector is not in the method's signature, because sparse vectors can only be used as named vectors,
         # and there is no default name for them
         vector: Union[DenseQueryVector, SparseQueryVector, MultiQueryVector, types.NumpyArray]
@@ -383,9 +365,7 @@ class LocalCollection:
         return all(p == v for p, v in zip(pattern_parts, key_parts))
 
     @classmethod
-    def _filter_payload(
-        cls, payload: Any, predicate: Callable[[str], bool], path: str = ""
-    ) -> Any:
+    def _filter_payload(cls, payload: Any, predicate: Callable[[str], bool], path: str = "") -> Any:
         if isinstance(payload, dict):
             res = {}
             if path != "":
@@ -422,9 +402,7 @@ class LocalCollection:
         if isinstance(with_payload, list):
             return cls._filter_payload(
                 payload,
-                lambda key: any(
-                    map(lambda pattern: cls._check_include_pattern(pattern, key), with_payload)  # type: ignore
-                ),
+                lambda key: any(map(lambda pattern: cls._check_include_pattern(pattern, key), with_payload)),  # type: ignore
             )
 
         if isinstance(with_payload, models.PayloadSelectorInclude):
@@ -461,28 +439,20 @@ class LocalCollection:
         processed_payload = self._process_payload(payload, with_payload)
         return deepcopy(processed_payload) if return_copy else processed_payload
 
-    def _get_vectors(
-        self, idx: int, with_vectors: Union[bool, Sequence[str], None] = False
-    ) -> Optional[models.VectorStruct]:
+    def _get_vectors(self, idx: int, with_vectors: Union[bool, Sequence[str], None] = False) -> Optional[models.VectorStruct]:
         if with_vectors is False or with_vectors is None:
             return None
 
         dense_vectors = {
-            name: self.vectors[name][idx].tolist()
-            for name in self.vectors
-            if not self.deleted_per_vector[name][idx]
+            name: self.vectors[name][idx].tolist() for name in self.vectors if not self.deleted_per_vector[name][idx]
         }
 
         sparse_vectors = {
-            name: self.sparse_vectors[name][idx]
-            for name in self.sparse_vectors
-            if not self.deleted_per_vector[name][idx]
+            name: self.sparse_vectors[name][idx] for name in self.sparse_vectors if not self.deleted_per_vector[name][idx]
         }
 
         multivectors = {
-            name: self.multivectors[name][idx].tolist()
-            for name in self.multivectors
-            if not self.deleted_per_vector[name][idx]
+            name: self.multivectors[name][idx].tolist() for name in self.multivectors if not self.deleted_per_vector[name][idx]
         }
 
         # merge vectors
@@ -595,8 +565,7 @@ class LocalCollection:
                 scores = calculate_recommend_sum_scores(query_vector, vectors, distance)
             else:
                 raise TypeError(
-                    f"Recommend strategy is expected to be either "
-                    f"BEST_SCORE or SUM_SCORES, got: {query_vector.strategy}"
+                    f"Recommend strategy is expected to be either " f"BEST_SCORE or SUM_SCORES, got: {query_vector.strategy}"
                 )
         elif isinstance(query_vector, SparseRecoQuery):
             if rescore_idf:
@@ -607,8 +576,7 @@ class LocalCollection:
                 scores = calculate_sparse_recommend_sum_scores(query_vector, vectors)
             else:
                 raise TypeError(
-                    f"Recommend strategy is expected to be either "
-                    f"BEST_SCORE or SUM_SCORES, got: {query_vector.strategy}"
+                    f"Recommend strategy is expected to be either " f"BEST_SCORE or SUM_SCORES, got: {query_vector.strategy}"
                 )
         elif isinstance(query_vector, MultiRecoQuery):
             if query_vector.strategy == models.RecommendStrategy.BEST_SCORE:
@@ -617,8 +585,7 @@ class LocalCollection:
                 scores = calculate_multi_recommend_sum_scores(query_vector, vectors, distance)
             else:
                 raise TypeError(
-                    f"Recommend strategy is expected to be either "
-                    f"BEST_SCORE or SUM_SCORES, got: {query_vector.strategy}"
+                    f"Recommend strategy is expected to be either " f"BEST_SCORE or SUM_SCORES, got: {query_vector.strategy}"
                 )
         elif isinstance(query_vector, DiscoveryQuery):
             scores = calculate_discovery_scores(query_vector, vectors, distance)
@@ -757,9 +724,7 @@ class LocalCollection:
     def _prefetch(self, prefetch: types.Prefetch) -> list[types.ScoredPoint]:
         inner_prefetches = []
         if prefetch.prefetch is not None:
-            inner_prefetches = (
-                prefetch.prefetch if isinstance(prefetch.prefetch, list) else [prefetch.prefetch]
-            )
+            inner_prefetches = prefetch.prefetch if isinstance(prefetch.prefetch, list) else [prefetch.prefetch]
 
         if len(inner_prefetches) > 0:
             sources = [self._prefetch(inner_prefetch) for inner_prefetch in inner_prefetches]
@@ -814,9 +779,7 @@ class LocalCollection:
 
             # Fetch payload and vectors
             ids = [point.id for point in fused]
-            fetched_points = self.retrieve(
-                ids, with_payload=with_payload, with_vectors=with_vectors
-            )
+            fetched_points = self.retrieve(ids, with_payload=with_payload, with_vectors=with_vectors)
             for fetched, scored in zip(fetched_points, fused):
                 scored.payload = fetched.payload
                 scored.vector = fetched.vector
@@ -1257,11 +1220,7 @@ class LocalCollection:
 
         collection = lookup_from_collection if lookup_from_collection is not None else self
         search_in_vector_name = using if using is not None else DEFAULT_VECTOR_NAME
-        vector_name = (
-            lookup_from_vector_name
-            if lookup_from_vector_name is not None
-            else search_in_vector_name
-        )
+        vector_name = lookup_from_vector_name if lookup_from_vector_name is not None else search_in_vector_name
 
         positive = positive if positive is not None else []
         negative = negative if negative is not None else []
@@ -1270,10 +1229,7 @@ class LocalCollection:
         if strategy == types.RecommendStrategy.AVERAGE_VECTOR:
             if len(positive) == 0:
                 raise ValueError("Positive list is empty")
-        elif (
-            strategy == types.RecommendStrategy.BEST_SCORE
-            or strategy == types.RecommendStrategy.SUM_SCORES
-        ):
+        elif strategy == types.RecommendStrategy.BEST_SCORE or strategy == types.RecommendStrategy.SUM_SCORES:
             if len(positive) == 0 and len(negative) == 0:
                 raise ValueError("No positive or negative examples given")
 
@@ -1315,18 +1271,14 @@ class LocalCollection:
         )
 
     @staticmethod
-    def _recommend_average_dense(
-        positive_vectors: list[list[float]], negative_vectors: list[list[float]]
-    ) -> types.NumpyArray:
+    def _recommend_average_dense(positive_vectors: list[list[float]], negative_vectors: list[list[float]]) -> types.NumpyArray:
         positive_vectors_np = np.stack(positive_vectors)
         negative_vectors_np = np.stack(negative_vectors) if len(negative_vectors) > 0 else None
 
         mean_positive_vector = np.mean(positive_vectors_np, axis=0)
 
         if negative_vectors_np is not None:
-            vector = (
-                mean_positive_vector + mean_positive_vector - np.mean(negative_vectors_np, axis=0)
-            )
+            vector = mean_positive_vector + mean_positive_vector - np.mean(negative_vectors_np, axis=0)
         else:
             vector = mean_positive_vector
         return vector
@@ -1411,16 +1363,11 @@ class LocalCollection:
                     sparse_negative_vectors,
                 )
             elif multi_positive_vectors:
-                query_vector = self._recommend_average_multi(
-                    multi_positive_vectors, multi_negative_vectors
-                )
+                query_vector = self._recommend_average_multi(multi_positive_vectors, multi_negative_vectors)
             else:
                 raise ValueError("No positive examples given with 'average_vector' strategy")
 
-        elif (
-            strategy == types.RecommendStrategy.BEST_SCORE
-            or strategy == types.RecommendStrategy.SUM_SCORES
-        ):
+        elif strategy == types.RecommendStrategy.BEST_SCORE or strategy == types.RecommendStrategy.SUM_SCORES:
             if positive_vectors or negative_vectors:
                 query_vector = RecoQuery(
                     positive=positive_vectors,
@@ -1440,13 +1387,9 @@ class LocalCollection:
                     strategy=strategy,
                 )
             else:
-                raise ValueError(
-                    f"No positive or negative examples given with '{strategy}' strategy"
-                )
+                raise ValueError(f"No positive or negative examples given with '{strategy}' strategy")
         else:
-            raise ValueError(
-                f"strategy `{strategy}` is not a valid strategy, choose one from {types.RecommendStrategy}"
-            )
+            raise ValueError(f"strategy `{strategy}` is not a valid strategy, choose one from {types.RecommendStrategy}")
         return query_vector, edited_query_filter
 
     def recommend(
@@ -1537,9 +1480,7 @@ class LocalCollection:
         sample: int = 10,
         using: Optional[str] = None,
     ) -> types.SearchMatrixOffsetsResponse:
-        ids, all_scores = self._search_distance_matrix(
-            query_filter=query_filter, limit=limit, sample=sample, using=using
-        )
+        ids, all_scores = self._search_distance_matrix(query_filter=query_filter, limit=limit, sample=sample, using=using)
 
         offsets_row = []
         offsets_col = []
@@ -1571,17 +1512,11 @@ class LocalCollection:
         sample: int = 10,
         using: Optional[str] = None,
     ) -> types.SearchMatrixPairsResponse:
-        ids, all_scores = self._search_distance_matrix(
-            query_filter=query_filter, limit=limit, sample=sample, using=using
-        )
+        ids, all_scores = self._search_distance_matrix(query_filter=query_filter, limit=limit, sample=sample, using=using)
         pairs = []
         for sample_id, sample_scores in list(zip(ids, all_scores)):
             for sample_score in sample_scores:
-                pairs.append(
-                    types.SearchMatrixPair(
-                        a=sample_id, b=sample_score.id, score=sample_score.score
-                    )
-                )
+                pairs.append(types.SearchMatrixPair(a=sample_id, b=sample_score.id, score=sample_score.score))
 
         return types.SearchMatrixPairsResponse(
             pairs=pairs,
@@ -1598,9 +1533,7 @@ class LocalCollection:
         search_in_vector_name = using if using is not None else DEFAULT_VECTOR_NAME
         # Sample random points from the whole collection to filter out the ones without vectors
         # TODO: use search_filter once with have an HasVector like condition
-        candidates = self._sample_randomly(
-            len(self.ids), query_filter, False, search_in_vector_name
-        )
+        candidates = self._sample_randomly(len(self.ids), query_filter, False, search_in_vector_name)
         for candidate in candidates:
             # check if enough samples are collected
             if len(samples) == sample:
@@ -1624,11 +1557,7 @@ class LocalCollection:
             ids_to_includes = [x for (i, x) in enumerate(ids) if i != sampled_id_index]
             sampling_filter = _include_ids_in_filter(query_filter, ids_to_includes)
             sampled_vector = sampled.vector
-            search_vector = (
-                sampled_vector[search_in_vector_name]
-                if isinstance(sampled_vector, dict)
-                else sampled_vector
-            )
+            search_vector = sampled_vector[search_in_vector_name] if isinstance(sampled_vector, dict) else sampled_vector
             samples_scores = self.search(
                 query_vector=(search_in_vector_name, search_vector),
                 query_filter=sampling_filter,
@@ -1645,11 +1574,11 @@ class LocalCollection:
         target: Optional[models.VectorInput], collection: "LocalCollection", vector_name: str
     ) -> tuple[models.Vector, Optional[types.PointId]]:
         # todo: context can no longer be grpc.TargetVector, but models.VectorInput, currently, grpc types are not supported
-        target = (
-            GrpcToRest.convert_target_vector(target)
-            if target is not None and isinstance(target, grpc.TargetVector)
-            else target
-        )
+        # target = (
+        #     GrpcToRest.convert_target_vector(target)
+        #     if target is not None and isinstance(target, grpc.TargetVector)
+        #     else target
+        # )
         if isinstance(target, get_args(types.PointId)):
             if target not in collection.ids:
                 raise ValueError(f"Point {target} is not found in the collection")
@@ -1668,16 +1597,15 @@ class LocalCollection:
 
     def _preprocess_context(
         self, context: list[models.ContextPair], collection: "LocalCollection", vector_name: str
-    ) -> tuple[
-        list[ContextPair], list[SparseContextPair], list[MultiContextPair], list[types.PointId]
-    ]:
+    ) -> tuple[list[ContextPair], list[SparseContextPair], list[MultiContextPair], list[types.PointId]]:
         # todo: context can no longer be ContextExamplePair, currently grpc types are not supported
         context = [
-            (
-                GrpcToRest.convert_context_example_pair(pair)
-                if isinstance(pair, grpc.ContextExamplePair)
-                else pair
-            )
+            # (
+            #     GrpcToRest.convert_context_example_pair(pair)
+            #     if isinstance(pair, grpc.ContextExamplePair)
+            #     else pair
+            # )
+            pair
             for pair in context
         ]
         mentioned_ids = []
@@ -1706,29 +1634,17 @@ class LocalCollection:
                 else:
                     pair_vectors.append(example)
 
-            if isinstance(pair_vectors[0], SparseVector) and isinstance(
-                pair_vectors[1], SparseVector
-            ):
-                sparse_context_vectors.append(
-                    SparseContextPair(positive=pair_vectors[0], negative=pair_vectors[1])
-                )
+            if isinstance(pair_vectors[0], SparseVector) and isinstance(pair_vectors[1], SparseVector):
+                sparse_context_vectors.append(SparseContextPair(positive=pair_vectors[0], negative=pair_vectors[1]))
             elif isinstance(pair_vectors[0], list) and isinstance(pair_vectors[1], list):
                 if isinstance(pair_vectors[0][0], float) and isinstance(pair_vectors[1][0], float):
-                    dense_context_vectors.append(
-                        ContextPair(positive=pair_vectors[0], negative=pair_vectors[1])
-                    )
+                    dense_context_vectors.append(ContextPair(positive=pair_vectors[0], negative=pair_vectors[1]))
                 elif isinstance(pair_vectors[0][0], list) and isinstance(pair_vectors[1][0], list):
-                    multi_context_vectors.append(
-                        MultiContextPair(positive=pair_vectors[0], negative=pair_vectors[1])
-                    )
+                    multi_context_vectors.append(MultiContextPair(positive=pair_vectors[0], negative=pair_vectors[1]))
                 else:
-                    raise ValueError(
-                        "Context example pair must be of the same type: dense, sparse or multi vectors"
-                    )
+                    raise ValueError("Context example pair must be of the same type: dense, sparse or multi vectors")
             else:
-                raise ValueError(
-                    "Context example pair must be of the same type: dense, sparse or multi vectors"
-                )
+                raise ValueError("Context example pair must be of the same type: dense, sparse or multi vectors")
 
         if (
             sum(
@@ -1740,9 +1656,7 @@ class LocalCollection:
             )
             > 1
         ):
-            raise ValueError(
-                "All context example pairs must be either dense or sparse or multi vectors"
-            )
+            raise ValueError("All context example pairs must be either dense or sparse or multi vectors")
         return dense_context_vectors, sparse_context_vectors, multi_context_vectors, mentioned_ids
 
     def _preprocess_discover(
@@ -1765,17 +1679,13 @@ class LocalCollection:
 
         collection = lookup_from_collection if lookup_from_collection is not None else self
         search_in_vector_name = using if using is not None else DEFAULT_VECTOR_NAME
-        vector_name = (
-            lookup_from_vector_name
-            if lookup_from_vector_name is not None
-            else search_in_vector_name
-        )
+        vector_name = lookup_from_vector_name if lookup_from_vector_name is not None else search_in_vector_name
 
         target_vector, target_id = self._preprocess_target(target, collection, vector_name)
         context = list(context) if context is not None else []
 
-        dense_context_vectors, sparse_context_vectors, multi_context_vectors, mentioned_ids = (
-            self._preprocess_context(context, collection, vector_name)
+        dense_context_vectors, sparse_context_vectors, multi_context_vectors, mentioned_ids = self._preprocess_context(
+            context, collection, vector_name
         )
 
         if target_id is not None and collection == self:
@@ -1888,9 +1798,7 @@ class LocalCollection:
 
         # order by value
         if offset is not None:
-            raise ValueError(
-                "Offset is not supported in conjunction with `order_by` scroll parameter"
-            )
+            raise ValueError("Offset is not supported in conjunction with `order_by` scroll parameter")
 
         return self._scroll_by_value(
             order_by=order_by,
@@ -1950,8 +1858,8 @@ class LocalCollection:
         with_payload: Union[bool, Sequence[str], types.PayloadSelector] = True,
         with_vectors: Union[bool, Sequence[str]] = False,
     ) -> tuple[list[types.Record], Optional[types.PointId]]:
-        if isinstance(order_by, grpc.OrderBy):
-            order_by = GrpcToRest.convert_order_by(order_by)
+        # if isinstance(order_by, grpc.OrderBy):
+        #     order_by = GrpcToRest.convert_order_by(order_by)
         if isinstance(order_by, str):
             order_by = models.OrderBy(key=order_by)
 
@@ -2060,9 +1968,7 @@ class LocalCollection:
         with_vectors: Union[bool, Sequence[str]],
     ) -> list[models.ScoredPoint]:
         # collect prefetches in vec of dicts for faster lookup
-        prefetches_scores = [
-            dict((point.id, point.score) for point in prefetch) for prefetch in prefetches_results
-        ]
+        prefetches_scores = [dict((point.id, point.score) for point in prefetch) for prefetch in prefetches_results]
 
         defaults = query.defaults or {}
 
@@ -2107,9 +2013,7 @@ class LocalCollection:
 
     def _update_point(self, point: models.PointStruct) -> None:
         idx = self.ids[point.id]
-        self.payload[idx] = deepcopy(
-            to_jsonable_python(point.payload) if point.payload is not None else {}
-        )
+        self.payload[idx] = deepcopy(to_jsonable_python(point.payload) if point.payload is not None else {})
 
         if isinstance(point.vector, list):
             vectors = {DEFAULT_VECTOR_NAME: point.vector}
@@ -2167,9 +2071,7 @@ class LocalCollection:
         self.ids[point.id] = idx
         self.ids_inv.append(point.id)
 
-        self.payload.append(
-            deepcopy(to_jsonable_python(point.payload) if point.payload is not None else {})
-        )
+        self.payload.append(deepcopy(to_jsonable_python(point.payload) if point.payload is not None else {}))
         assert len(self.payload) == len(self.ids_inv), "Payload and ids_inv must be the same size"
         self.deleted = np.append(self.deleted, 0)
 
@@ -2188,9 +2090,7 @@ class LocalCollection:
                 # Add fake vector and mark as removed
                 fake_vector = np.ones(named_vectors.shape[1])
                 named_vectors[idx] = fake_vector
-                self.deleted_per_vector[vector_name] = np.append(
-                    self.deleted_per_vector[vector_name], 1
-                )
+                self.deleted_per_vector[vector_name] = np.append(self.deleted_per_vector[vector_name], 1)
             else:
                 vector_np = np.array(vector)
                 assert not np.isnan(vector_np).any(), "Vector contains NaN values"
@@ -2200,9 +2100,7 @@ class LocalCollection:
                     vector_np = vector_np / norm if norm > EPSILON else vector_np
                 named_vectors[idx] = vector_np
                 self.vectors[vector_name] = named_vectors
-                self.deleted_per_vector[vector_name] = np.append(
-                    self.deleted_per_vector[vector_name], 0
-                )
+                self.deleted_per_vector[vector_name] = np.append(self.deleted_per_vector[vector_name], 0)
 
         # sparse vectors
         for vector_name, named_vectors in self.sparse_vectors.items():
@@ -2216,16 +2114,12 @@ class LocalCollection:
                 # Add fake vector and mark as removed
                 fake_vector = empty_sparse_vector()
                 named_vectors[idx] = fake_vector
-                self.deleted_per_vector[vector_name] = np.append(
-                    self.deleted_per_vector[vector_name], 1
-                )
+                self.deleted_per_vector[vector_name] = np.append(self.deleted_per_vector[vector_name], 1)
             else:
                 named_vectors[idx] = vector
                 self._update_idf_append(vector, vector_name)
                 self.sparse_vectors[vector_name] = named_vectors
-                self.deleted_per_vector[vector_name] = np.append(
-                    self.deleted_per_vector[vector_name], 0
-                )
+                self.deleted_per_vector[vector_name] = np.append(self.deleted_per_vector[vector_name], 0)
 
         # multi vectors
         for vector_name, named_vectors in self.multivectors.items():
@@ -2238,9 +2132,7 @@ class LocalCollection:
             if vector is None:
                 # Add fake vector and mark as removed
                 named_vectors[idx] = np.array([])
-                self.deleted_per_vector[vector_name] = np.append(
-                    self.deleted_per_vector[vector_name], 1
-                )
+                self.deleted_per_vector[vector_name] = np.append(self.deleted_per_vector[vector_name], 1)
             else:
                 vector_np = np.array(vector)
                 assert not np.isnan(vector_np).any(), "Vector contains NaN values"
@@ -2250,9 +2142,7 @@ class LocalCollection:
                     vector_np /= np.where(vector_norm != 0.0, vector_norm, EPSILON)
                 named_vectors[idx] = vector_np
                 self.multivectors[vector_name] = named_vectors
-                self.deleted_per_vector[vector_name] = np.append(
-                    self.deleted_per_vector[vector_name], 0
-                )
+                self.deleted_per_vector[vector_name] = np.append(self.deleted_per_vector[vector_name], 0)
 
     def _upsert_point(self, point: models.PointStruct) -> None:
         if isinstance(point.id, str):
@@ -2277,9 +2167,7 @@ class LocalCollection:
         else:
             vector_names = list(self.vectors.keys())
             multivector_names = list(self.multivectors.keys())
-            if (vector_names and vector_names != [""]) or (
-                multivector_names and multivector_names != [""]
-            ):
+            if (vector_names and vector_names != [""]) or (multivector_names and multivector_names != [""]):
                 raise ValueError(
                     "Wrong input: Unnamed vectors are not allowed when a collection has named vectors or multivectors: "
                     f"{vector_names}, {multivector_names}"
@@ -2333,9 +2221,7 @@ class LocalCollection:
                 stacklevel=6,
             )
 
-    def _update_named_vectors(
-        self, idx: int, vectors: dict[str, Union[list[float], SparseVector]]
-    ) -> None:
+    def _update_named_vectors(self, idx: int, vectors: dict[str, Union[list[float], SparseVector]]) -> None:
         for vector_name, vector in vectors.items():
             if isinstance(vector, SparseVector):
                 validate_sparse_vector(vector)
@@ -2530,30 +2416,22 @@ class LocalCollection:
                 points_selector = update_op.set_payload.points or update_op.set_payload.filter
                 self.set_payload(update_op.set_payload.payload, points_selector)
             elif isinstance(update_op, models.OverwritePayloadOperation):
-                points_selector = (
-                    update_op.overwrite_payload.points or update_op.overwrite_payload.filter
-                )
+                points_selector = update_op.overwrite_payload.points or update_op.overwrite_payload.filter
                 self.overwrite_payload(update_op.overwrite_payload.payload, points_selector)
             elif isinstance(update_op, models.DeletePayloadOperation):
-                points_selector = (
-                    update_op.delete_payload.points or update_op.delete_payload.filter
-                )
+                points_selector = update_op.delete_payload.points or update_op.delete_payload.filter
                 self.delete_payload(update_op.delete_payload.keys, points_selector)
             elif isinstance(update_op, models.ClearPayloadOperation):
                 self.clear_payload(update_op.clear_payload)
             elif isinstance(update_op, models.UpdateVectorsOperation):
                 self.update_vectors(update_op.update_vectors.points)
             elif isinstance(update_op, models.DeleteVectorsOperation):
-                points_selector = (
-                    update_op.delete_vectors.points or update_op.delete_vectors.filter
-                )
+                points_selector = update_op.delete_vectors.points or update_op.delete_vectors.filter
                 self.delete_vectors(update_op.delete_vectors.vector, points_selector)
             else:
                 raise ValueError(f"Unsupported update operation: {type(update_op)}")
 
-    def update_sparse_vectors_config(
-        self, vector_name: str, new_config: models.SparseVectorParams
-    ) -> None:
+    def update_sparse_vectors_config(self, vector_name: str, new_config: models.SparseVectorParams) -> None:
         if vector_name not in self.sparse_vectors:
             raise ValueError(f"Vector {vector_name} does not exist in the collection")
 
@@ -2599,9 +2477,7 @@ class LocalCollection:
         )
 
 
-def ignore_mentioned_ids_filter(
-    query_filter: Optional[types.Filter], mentioned_ids: list[types.PointId]
-) -> types.Filter:
+def ignore_mentioned_ids_filter(query_filter: Optional[types.Filter], mentioned_ids: list[types.PointId]) -> types.Filter:
     if len(mentioned_ids) == 0:
         return query_filter
 
@@ -2623,9 +2499,7 @@ def ignore_mentioned_ids_filter(
     return query_filter
 
 
-def _include_ids_in_filter(
-    query_filter: Optional[types.Filter], ids: list[types.PointId]
-) -> types.Filter:
+def _include_ids_in_filter(query_filter: Optional[types.Filter], ids: list[types.PointId]) -> types.Filter:
     if len(ids) == 0:
         return query_filter
 

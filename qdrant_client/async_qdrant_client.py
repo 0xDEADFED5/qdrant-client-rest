@@ -13,7 +13,8 @@ import warnings
 from copy import deepcopy
 from typing import Any, Awaitable, Callable, Iterable, Mapping, Optional, Sequence, Union
 import numpy as np
-from qdrant_client import grpc as grpc
+
+# from qdrant_client import grpc as grpc
 from qdrant_client.async_client_base import AsyncQdrantBase
 from qdrant_client.common.client_warnings import show_warning_once
 from qdrant_client.conversions import common_types as types
@@ -92,9 +93,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
         path: Optional[str] = None,
         force_disable_check_same_thread: bool = False,
         grpc_options: Optional[dict[str, Any]] = None,
-        auth_token_provider: Optional[
-            Union[Callable[[], str], Callable[[], Awaitable[str]]]
-        ] = None,
+        auth_token_provider: Optional[Union[Callable[[], str], Callable[[], Awaitable[str]]]] = None,
         cloud_inference: bool = False,
         local_inference_batch_size: Optional[int] = None,
         check_compatibility: bool = True,
@@ -102,25 +101,15 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
     ):
         self._inference_inspector = Inspector()
         super().__init__(parser=self._inference_inspector.parser, **kwargs)
-        self._init_options = {
-            key: value
-            for (key, value) in locals().items()
-            if key not in ("self", "__class__", "kwargs")
-        }
+        self._init_options = {key: value for (key, value) in locals().items() if key not in ("self", "__class__", "kwargs")}
         self._init_options.update(deepcopy(kwargs))
         self._client: AsyncQdrantBase
         if sum([param is not None for param in (location, url, host, path)]) > 1:
-            raise ValueError(
-                "Only one of <location>, <url>, <host> or <path> should be specified."
-            )
+            raise ValueError("Only one of <location>, <url>, <host> or <path> should be specified.")
         if location == ":memory:":
-            self._client = AsyncQdrantLocal(
-                location=location, force_disable_check_same_thread=force_disable_check_same_thread
-            )
+            self._client = AsyncQdrantLocal(location=location, force_disable_check_same_thread=force_disable_check_same_thread)
         elif path is not None:
-            self._client = AsyncQdrantLocal(
-                location=path, force_disable_check_same_thread=force_disable_check_same_thread
-            )
+            self._client = AsyncQdrantLocal(location=path, force_disable_check_same_thread=force_disable_check_same_thread)
         else:
             if location is not None and url is None:
                 url = location
@@ -155,27 +144,27 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
         if hasattr(self, "_client"):
             await self._client.close(grpc_grace=grpc_grace, **kwargs)
 
-    @property
-    def grpc_collections(self) -> grpc.CollectionsStub:
-        """gRPC client for collections methods
+    # @property
+    # def grpc_collections(self) -> grpc.CollectionsStub:
+    #     """gRPC client for collections methods
 
-        Returns:
-            An instance of raw gRPC client, generated from Protobuf
-        """
-        if isinstance(self._client, AsyncQdrantRemote):
-            return self._client.grpc_collections
-        raise NotImplementedError(f"gRPC client is not supported for {type(self._client)}")
+    #     Returns:
+    #         An instance of raw gRPC client, generated from Protobuf
+    #     """
+    #     if isinstance(self._client, AsyncQdrantRemote):
+    #         return self._client.grpc_collections
+    #     raise NotImplementedError(f"gRPC client is not supported for {type(self._client)}")
 
-    @property
-    def grpc_points(self) -> grpc.PointsStub:
-        """gRPC client for points methods
+    # @property
+    # def grpc_points(self) -> grpc.PointsStub:
+    #     """gRPC client for points methods
 
-        Returns:
-            An instance of raw gRPC client, generated from Protobuf
-        """
-        if isinstance(self._client, AsyncQdrantRemote):
-            return self._client.grpc_points
-        raise NotImplementedError(f"gRPC client is not supported for {type(self._client)}")
+    #     Returns:
+    #         An instance of raw gRPC client, generated from Protobuf
+    #     """
+    #     if isinstance(self._client, AsyncQdrantRemote):
+    #         return self._client.grpc_points
+    #     raise NotImplementedError(f"gRPC client is not supported for {type(self._client)}")
 
     @property
     def rest(self) -> AsyncApis[AsyncApiClient]:
@@ -398,11 +387,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
         requests = self._resolve_query_batch_request(requests)
         requires_inference = self._inference_inspector.inspect(requests)
         if requires_inference and (not self.cloud_inference):
-            requests = list(
-                self._embed_models(
-                    requests, is_query=True, batch_size=self.local_inference_batch_size
-                )
-            )
+            requests = list(self._embed_models(requests, is_query=True, batch_size=self.local_inference_batch_size))
         return await self._client.query_batch_points(
             collection_name=collection_name,
             requests=requests,
@@ -532,31 +517,15 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             requires_inference = self._inference_inspector.inspect(prefetch)
         if requires_inference and (not self.cloud_inference):
             query = (
-                next(
-                    iter(
-                        self._embed_models(
-                            query, is_query=True, batch_size=self.local_inference_batch_size
-                        )
-                    )
-                )
+                next(iter(self._embed_models(query, is_query=True, batch_size=self.local_inference_batch_size)))
                 if query is not None
                 else None
             )
             if isinstance(prefetch, list):
-                prefetch = list(
-                    self._embed_models(
-                        prefetch, is_query=True, batch_size=self.local_inference_batch_size
-                    )
-                )
+                prefetch = list(self._embed_models(prefetch, is_query=True, batch_size=self.local_inference_batch_size))
             else:
                 prefetch = (
-                    next(
-                        iter(
-                            self._embed_models(
-                                prefetch, is_query=True, batch_size=self.local_inference_batch_size
-                            )
-                        )
-                    )
+                    next(iter(self._embed_models(prefetch, is_query=True, batch_size=self.local_inference_batch_size)))
                     if prefetch is not None
                     else None
                 )
@@ -698,30 +667,14 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             requires_inference = self._inference_inspector.inspect(prefetch)
         if requires_inference and (not self.cloud_inference):
             query = (
-                next(
-                    iter(
-                        self._embed_models(
-                            query, is_query=True, batch_size=self.local_inference_batch_size
-                        )
-                    )
-                )
+                next(iter(self._embed_models(query, is_query=True, batch_size=self.local_inference_batch_size)))
                 if query is not None
                 else None
             )
             if isinstance(prefetch, list):
-                prefetch = list(
-                    self._embed_models(
-                        prefetch, is_query=True, batch_size=self.local_inference_batch_size
-                    )
-                )
+                prefetch = list(self._embed_models(prefetch, is_query=True, batch_size=self.local_inference_batch_size))
             elif prefetch is not None:
-                prefetch = next(
-                    iter(
-                        self._embed_models(
-                            prefetch, is_query=True, batch_size=self.local_inference_batch_size
-                        )
-                    )
-                )
+                prefetch = next(iter(self._embed_models(prefetch, is_query=True, batch_size=self.local_inference_batch_size)))
         return await self._client.query_points_groups(
             collection_name=collection_name,
             query=query,
@@ -1550,33 +1503,23 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             Operation Result(UpdateResult)
         """
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
-        if (
-            not isinstance(points, types.Batch)
-            and len(points) > 0
-            and isinstance(points[0], grpc.PointStruct)
-        ):
-            show_warning_once(
-                message="\n            Usage of `grpc.PointStruct` is deprecated. Please use `models.PointStruct` instead.\n            ",
-                category=DeprecationWarning,
-                idx="grpc-input",
-                stacklevel=4,
-            )
+        # if (
+        #     not isinstance(points, types.Batch)
+        #     and len(points) > 0
+        #     and isinstance(points[0], grpc.PointStruct)
+        # ):
+        #     show_warning_once(
+        #         message="\n            Usage of `grpc.PointStruct` is deprecated. Please use `models.PointStruct` instead.\n            ",
+        #         category=DeprecationWarning,
+        #         idx="grpc-input",
+        #         stacklevel=4,
+        #     )
         requires_inference = self._inference_inspector.inspect(points)
         if requires_inference and (not self.cloud_inference):
             if isinstance(points, types.Batch):
-                points = next(
-                    iter(
-                        self._embed_models(
-                            points, is_query=False, batch_size=self.local_inference_batch_size
-                        )
-                    )
-                )
+                points = next(iter(self._embed_models(points, is_query=False, batch_size=self.local_inference_batch_size)))
             else:
-                points = list(
-                    self._embed_models(
-                        points, is_query=False, batch_size=self.local_inference_batch_size
-                    )
-                )
+                points = list(self._embed_models(points, is_query=False, batch_size=self.local_inference_batch_size))
         return await self._client.upsert(
             collection_name=collection_name,
             points=points,
@@ -1627,11 +1570,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
         requires_inference = self._inference_inspector.inspect(points)
         if requires_inference and (not self.cloud_inference):
-            points = list(
-                self._embed_models(
-                    points, is_query=False, batch_size=self.local_inference_batch_size
-                )
-            )
+            points = list(self._embed_models(points, is_query=False, batch_size=self.local_inference_batch_size))
         return await self._client.update_vectors(
             collection_name=collection_name,
             points=points,
@@ -2072,9 +2011,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
         requires_inference = self._inference_inspector.inspect(update_operations)
         if requires_inference and (not self.cloud_inference):
             update_operations = list(
-                self._embed_models(
-                    update_operations, is_query=False, batch_size=self.local_inference_batch_size
-                )
+                self._embed_models(update_operations, is_query=False, batch_size=self.local_inference_batch_size)
             )
         return await self._client.batch_update_points(
             collection_name=collection_name,
@@ -2108,9 +2045,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             change_aliases_operations=change_aliases_operations, timeout=timeout, **kwargs
         )
 
-    async def get_collection_aliases(
-        self, collection_name: str, **kwargs: Any
-    ) -> types.CollectionsAliasesResponse:
+    async def get_collection_aliases(self, collection_name: str, **kwargs: Any) -> types.CollectionsAliasesResponse:
         """Get collection aliases
 
         Args:
@@ -2195,9 +2130,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             Operation result
         """
         if "optimizer_config" in kwargs and optimizers_config is not None:
-            raise ValueError(
-                "Only one of optimizer_config and optimizers_config should be specified"
-            )
+            raise ValueError("Only one of optimizer_config and optimizers_config should be specified")
         if "optimizer_config" in kwargs:
             optimizers_config = kwargs.pop("optimizer_config")
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
@@ -2214,9 +2147,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             **kwargs,
         )
 
-    async def delete_collection(
-        self, collection_name: str, timeout: Optional[int] = None, **kwargs: Any
-    ) -> bool:
+    async def delete_collection(self, collection_name: str, timeout: Optional[int] = None, **kwargs: Any) -> bool:
         """Removes collection and all it's data
 
         Args:
@@ -2229,16 +2160,12 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             Operation result
         """
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
-        return await self._client.delete_collection(
-            collection_name=collection_name, timeout=timeout, **kwargs
-        )
+        return await self._client.delete_collection(collection_name=collection_name, timeout=timeout, **kwargs)
 
     async def create_collection(
         self,
         collection_name: str,
-        vectors_config: Optional[
-            Union[types.VectorParams, Mapping[str, types.VectorParams]]
-        ] = None,
+        vectors_config: Optional[Union[types.VectorParams, Mapping[str, types.VectorParams]]] = None,
         sparse_vectors_config: Optional[Mapping[str, types.SparseVectorParams]] = None,
         shard_number: Optional[int] = None,
         sharding_method: Optional[types.ShardingMethod] = None,
@@ -2517,9 +2444,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             except (StopIteration, StopAsyncIteration):
                 points = []
             if requires_inference:
-                points = self._embed_models_strict(
-                    points, parallel=parallel, batch_size=self.local_inference_batch_size
-                )
+                points = self._embed_models_strict(points, parallel=parallel, batch_size=self.local_inference_batch_size)
         return self._client.upload_points(
             collection_name=collection_name,
             points=points,
@@ -2534,9 +2459,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
     def upload_collection(
         self,
         collection_name: str,
-        vectors: Union[
-            Iterable[types.VectorStruct], dict[str, types.NumpyArray], types.NumpyArray
-        ],
+        vectors: Union[Iterable[types.VectorStruct], dict[str, types.NumpyArray], types.NumpyArray],
         payload: Optional[Iterable[dict[Any, Any]]] = None,
         ids: Optional[Iterable[types.PointId]] = None,
         batch_size: int = 64,
@@ -2588,9 +2511,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
                 except (StopIteration, StopAsyncIteration):
                     vectors = []
                 if requires_inference:
-                    vectors = self._embed_models_strict(
-                        vectors, parallel=parallel, batch_size=self.local_inference_batch_size
-                    )
+                    vectors = self._embed_models_strict(vectors, parallel=parallel, batch_size=self.local_inference_batch_size)
         return self._client.upload_collection(
             collection_name=collection_name,
             vectors=vectors,
@@ -2681,9 +2602,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             **kwargs,
         )
 
-    async def list_snapshots(
-        self, collection_name: str, **kwargs: Any
-    ) -> list[types.SnapshotDescription]:
+    async def list_snapshots(self, collection_name: str, **kwargs: Any) -> list[types.SnapshotDescription]:
         """List all snapshots for a given collection.
 
         Args:
@@ -2711,13 +2630,9 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             Snapshot description
         """
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
-        return await self._client.create_snapshot(
-            collection_name=collection_name, wait=wait, **kwargs
-        )
+        return await self._client.create_snapshot(collection_name=collection_name, wait=wait, **kwargs)
 
-    async def delete_snapshot(
-        self, collection_name: str, snapshot_name: str, wait: bool = True, **kwargs: Any
-    ) -> Optional[bool]:
+    async def delete_snapshot(self, collection_name: str, snapshot_name: str, wait: bool = True, **kwargs: Any) -> Optional[bool]:
         """Delete snapshot for a given collection.
 
         Args:
@@ -2745,9 +2660,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
         return await self._client.list_full_snapshots(**kwargs)
 
-    async def create_full_snapshot(
-        self, wait: bool = True, **kwargs: Any
-    ) -> Optional[types.SnapshotDescription]:
+    async def create_full_snapshot(self, wait: bool = True, **kwargs: Any) -> Optional[types.SnapshotDescription]:
         """Create snapshot for a whole storage.
 
         Args:
@@ -2762,9 +2675,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
         return await self._client.create_full_snapshot(wait=wait, **kwargs)
 
-    async def delete_full_snapshot(
-        self, snapshot_name: str, wait: bool = True, **kwargs: Any
-    ) -> Optional[bool]:
+    async def delete_full_snapshot(self, snapshot_name: str, wait: bool = True, **kwargs: Any) -> Optional[bool]:
         """Delete snapshot for a whole storage.
 
         Args:
@@ -2778,9 +2689,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             True if snapshot was deleted
         """
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
-        return await self._client.delete_full_snapshot(
-            snapshot_name=snapshot_name, wait=wait, **kwargs
-        )
+        return await self._client.delete_full_snapshot(snapshot_name=snapshot_name, wait=wait, **kwargs)
 
     async def recover_snapshot(
         self,
@@ -2830,9 +2739,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             **kwargs,
         )
 
-    async def list_shard_snapshots(
-        self, collection_name: str, shard_id: int, **kwargs: Any
-    ) -> list[types.SnapshotDescription]:
+    async def list_shard_snapshots(self, collection_name: str, shard_id: int, **kwargs: Any) -> list[types.SnapshotDescription]:
         """List all snapshots of a given shard
 
         Args:
@@ -2843,9 +2750,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             List of snapshots
         """
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
-        return await self._client.list_shard_snapshots(
-            collection_name=collection_name, shard_id=shard_id, **kwargs
-        )
+        return await self._client.list_shard_snapshots(collection_name=collection_name, shard_id=shard_id, **kwargs)
 
     async def create_shard_snapshot(
         self, collection_name: str, shard_id: int, wait: bool = True, **kwargs: Any
@@ -2864,9 +2769,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             Snapshot description
         """
         assert len(kwargs) == 0, f"Unknown arguments: {list(kwargs.keys())}"
-        return await self._client.create_shard_snapshot(
-            collection_name=collection_name, shard_id=shard_id, wait=wait, **kwargs
-        )
+        return await self._client.create_shard_snapshot(collection_name=collection_name, shard_id=shard_id, wait=wait, **kwargs)
 
     async def delete_shard_snapshot(
         self,
@@ -2993,9 +2896,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
             **kwargs,
         )
 
-    async def delete_shard_key(
-        self, collection_name: str, shard_key: types.ShardKey, **kwargs: Any
-    ) -> bool:
+    async def delete_shard_key(self, collection_name: str, shard_key: types.ShardKey, **kwargs: Any) -> bool:
         """Delete shard key for collection.
 
         Only works for collections with `custom` sharding method.
@@ -3007,9 +2908,7 @@ class AsyncQdrantClient(AsyncQdrantFastembedMixin):
         Returns:
             Operation result
         """
-        return await self._client.delete_shard_key(
-            collection_name=collection_name, shard_key=shard_key, **kwargs
-        )
+        return await self._client.delete_shard_key(collection_name=collection_name, shard_key=shard_key, **kwargs)
 
     async def info(self) -> types.VersionInfo:
         """Returns information about the running Qdrant instance like version and commit id

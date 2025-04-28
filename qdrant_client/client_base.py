@@ -351,9 +351,7 @@ class QdrantBase:
     ) -> bool:
         raise NotImplementedError()
 
-    def get_collection_aliases(
-        self, collection_name: str, **kwargs: Any
-    ) -> types.CollectionsAliasesResponse:
+    def get_collection_aliases(self, collection_name: str, **kwargs: Any) -> types.CollectionsAliasesResponse:
         raise NotImplementedError()
 
     def get_aliases(self, **kwargs: Any) -> types.CollectionsAliasesResponse:
@@ -413,9 +411,7 @@ class QdrantBase:
     def upload_collection(
         self,
         collection_name: str,
-        vectors: Union[
-            dict[str, types.NumpyArray], types.NumpyArray, Iterable[types.VectorStruct]
-        ],
+        vectors: Union[dict[str, types.NumpyArray], types.NumpyArray, Iterable[types.VectorStruct]],
         payload: Optional[Iterable[dict[Any, Any]]] = None,
         ids: Optional[Iterable[types.PointId]] = None,
         **kwargs: Any,
@@ -440,19 +436,13 @@ class QdrantBase:
     ) -> types.UpdateResult:
         raise NotImplementedError()
 
-    def list_snapshots(
-        self, collection_name: str, **kwargs: Any
-    ) -> list[types.SnapshotDescription]:
+    def list_snapshots(self, collection_name: str, **kwargs: Any) -> list[types.SnapshotDescription]:
         raise NotImplementedError()
 
-    def create_snapshot(
-        self, collection_name: str, **kwargs: Any
-    ) -> Optional[types.SnapshotDescription]:
+    def create_snapshot(self, collection_name: str, **kwargs: Any) -> Optional[types.SnapshotDescription]:
         raise NotImplementedError()
 
-    def delete_snapshot(
-        self, collection_name: str, snapshot_name: str, **kwargs: Any
-    ) -> Optional[bool]:
+    def delete_snapshot(self, collection_name: str, snapshot_name: str, **kwargs: Any) -> Optional[bool]:
         raise NotImplementedError()
 
     def list_full_snapshots(self, **kwargs: Any) -> list[types.SnapshotDescription]:
@@ -472,19 +462,13 @@ class QdrantBase:
     ) -> Optional[bool]:
         raise NotImplementedError()
 
-    def list_shard_snapshots(
-        self, collection_name: str, shard_id: int, **kwargs: Any
-    ) -> list[types.SnapshotDescription]:
+    def list_shard_snapshots(self, collection_name: str, shard_id: int, **kwargs: Any) -> list[types.SnapshotDescription]:
         raise NotImplementedError()
 
-    def create_shard_snapshot(
-        self, collection_name: str, shard_id: int, **kwargs: Any
-    ) -> Optional[types.SnapshotDescription]:
+    def create_shard_snapshot(self, collection_name: str, shard_id: int, **kwargs: Any) -> Optional[types.SnapshotDescription]:
         raise NotImplementedError()
 
-    def delete_shard_snapshot(
-        self, collection_name: str, shard_id: int, snapshot_name: str, **kwargs: Any
-    ) -> Optional[bool]:
+    def delete_shard_snapshot(self, collection_name: str, shard_id: int, snapshot_name: str, **kwargs: Any) -> Optional[bool]:
         raise NotImplementedError()
 
     def recover_shard_snapshot(

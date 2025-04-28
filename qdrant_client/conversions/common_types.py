@@ -10,7 +10,7 @@ else:
 
 from typing import Union, get_args, Sequence
 
-from qdrant_client import grpc
+# from qdrant_client import grpc
 from qdrant_client.http import models as rest
 
 typing_remap = {
@@ -39,46 +39,43 @@ def get_args_subscribed(tp):  # type: ignore
     Returns:
         tuple of type arguments
     """
-    return tuple(
-        remap_type(arg if not hasattr(arg, "__origin__") else arg.__origin__)
-        for arg in get_args(tp)
-    )
+    return tuple(remap_type(arg if not hasattr(arg, "__origin__") else arg.__origin__) for arg in get_args(tp))
 
 
-Filter = Union[rest.Filter, grpc.Filter]
-SearchParams = Union[rest.SearchParams, grpc.SearchParams]
-PayloadSelector = Union[rest.PayloadSelector, grpc.WithPayloadSelector]
+Filter = Union[rest.Filter]
+SearchParams = Union[rest.SearchParams]
+PayloadSelector = Union[rest.PayloadSelector]
 Distance = Union[rest.Distance, int]  # type(grpc.Distance) == int
-HnswConfigDiff = Union[rest.HnswConfigDiff, grpc.HnswConfigDiff]
-VectorsConfigDiff = Union[rest.VectorsConfigDiff, grpc.VectorsConfigDiff]
-QuantizationConfigDiff = Union[rest.QuantizationConfigDiff, grpc.QuantizationConfigDiff]
-OptimizersConfigDiff = Union[rest.OptimizersConfigDiff, grpc.OptimizersConfigDiff]
-CollectionParamsDiff = Union[rest.CollectionParamsDiff, grpc.CollectionParamsDiff]
-WalConfigDiff = Union[rest.WalConfigDiff, grpc.WalConfigDiff]
-QuantizationConfig = Union[rest.QuantizationConfig, grpc.QuantizationConfig]
-PointId = Union[int, str, grpc.PointId]
+HnswConfigDiff = Union[rest.HnswConfigDiff]
+VectorsConfigDiff = Union[rest.VectorsConfigDiff]
+QuantizationConfigDiff = Union[rest.QuantizationConfigDiff]
+OptimizersConfigDiff = Union[rest.OptimizersConfigDiff]
+CollectionParamsDiff = Union[rest.CollectionParamsDiff]
+WalConfigDiff = Union[rest.WalConfigDiff]
+QuantizationConfig = Union[rest.QuantizationConfig]
+PointId = Union[int, str]
 PayloadSchemaType = Union[
     rest.PayloadSchemaType,
     rest.PayloadSchemaParams,
     int,
-    grpc.PayloadIndexParams,
+    # grpc.PayloadIndexParams,
 ]  # type(grpc.PayloadSchemaType) == int
 PointStruct: TypeAlias = rest.PointStruct
 Batch: TypeAlias = rest.Batch
-Points = Union[Batch, Sequence[Union[rest.PointStruct, grpc.PointStruct]]]
+Points = Union[Batch, Sequence[Union[rest.PointStruct]]]
 PointsSelector = Union[
     list[PointId],
     rest.Filter,
-    grpc.Filter,
+    # grpc.Filter,
     rest.PointsSelector,
-    grpc.PointsSelector,
+    # grpc.PointsSelector,
 ]
-LookupLocation = Union[rest.LookupLocation, grpc.LookupLocation]
+LookupLocation = Union[rest.LookupLocation]
 RecommendStrategy: TypeAlias = rest.RecommendStrategy
 RecommendExample: TypeAlias = rest.RecommendExample
-TargetVector = Union[rest.RecommendExample, grpc.TargetVector]
-ContextExamplePair = Union[rest.ContextExamplePair, grpc.ContextExamplePair]
-OrderBy = Union[rest.OrderByInterface, grpc.OrderBy]
+TargetVector = Union[rest.RecommendExample]
+ContextExamplePair = Union[rest.ContextExamplePair]
+OrderBy = Union[rest.OrderByInterface]
 ShardingMethod: TypeAlias = rest.ShardingMethod
 ShardKey: TypeAlias = rest.ShardKey
 ShardKeySelector: TypeAlias = rest.ShardKeySelector
@@ -87,7 +84,7 @@ AliasOperations = Union[
     rest.CreateAliasOperation,
     rest.RenameAliasOperation,
     rest.DeleteAliasOperation,
-    grpc.AliasOperations,
+    # grpc.AliasOperations,
 ]
 Payload: TypeAlias = rest.Payload
 
@@ -119,10 +116,10 @@ Image: TypeAlias = rest.Image
 InferenceObject: TypeAlias = rest.InferenceObject
 StrictModeConfig: TypeAlias = rest.StrictModeConfig
 
-SearchRequest = Union[rest.SearchRequest, grpc.SearchPoints]
-RecommendRequest = Union[rest.RecommendRequest, grpc.RecommendPoints]
-DiscoverRequest = Union[rest.DiscoverRequest, grpc.DiscoverPoints]
-QueryRequest = Union[rest.QueryRequest, grpc.QueryPoints]
+SearchRequest = Union[rest.SearchRequest]
+RecommendRequest = Union[rest.RecommendRequest]
+DiscoverRequest = Union[rest.DiscoverRequest]
+QueryRequest = Union[rest.QueryRequest]
 
 ReadConsistency: TypeAlias = rest.ReadConsistency
 WriteOrdering: TypeAlias = rest.WriteOrdering
@@ -133,7 +130,7 @@ QueryResponse: TypeAlias = rest.QueryResponse
 
 FacetValue: TypeAlias = rest.FacetValue
 FacetResponse: TypeAlias = rest.FacetResponse
-SearchMatrixRequest = Union[rest.SearchMatrixRequest, grpc.SearchMatrixPoints]
+SearchMatrixRequest = Union[rest.SearchMatrixRequest]
 SearchMatrixOffsetsResponse: TypeAlias = rest.SearchMatrixOffsetsResponse
 SearchMatrixPairsResponse: TypeAlias = rest.SearchMatrixPairsResponse
 SearchMatrixPair: TypeAlias = rest.SearchMatrixPair

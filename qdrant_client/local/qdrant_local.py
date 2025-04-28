@@ -18,7 +18,8 @@ from typing import (
 from uuid import uuid4
 
 import numpy as np
-import portalocker
+
+# import portalocker
 
 from qdrant_client.common.client_warnings import show_warning, show_warning_once
 from qdrant_client._pydantic_compat import to_dict
@@ -85,7 +86,7 @@ class QdrantLocal(QdrantBase):
 
         try:
             if self._flock_file is not None and not self._flock_file.closed:
-                portalocker.unlock(self._flock_file)
+                # portalocker.unlock(self._flock_file)
                 self._flock_file.close()
         except TypeError:  # sometimes portalocker module can be garbage collected before
             # QdrantLocal instance
@@ -129,16 +130,16 @@ class QdrantLocal(QdrantBase):
             with open(lock_file_path, "w") as f:
                 f.write("tmp lock file")
         self._flock_file = open(lock_file_path, "r+")
-        try:
-            portalocker.lock(
-                self._flock_file,
-                portalocker.LockFlags.EXCLUSIVE | portalocker.LockFlags.NON_BLOCKING,
-            )
-        except portalocker.exceptions.LockException:
-            raise RuntimeError(
-                f"Storage folder {self.location} is already accessed by another instance of Qdrant client."
-                f" If you require concurrent access, use Qdrant server instead."
-            )
+        # try:
+        #     portalocker.lock(
+        #         self._flock_file,
+        #         portalocker.LockFlags.EXCLUSIVE | portalocker.LockFlags.NON_BLOCKING,
+        #     )
+        # except portalocker.exceptions.LockException:
+        #     raise RuntimeError(
+        #         f"Storage folder {self.location} is already accessed by another instance of Qdrant client."
+        #         f" If you require concurrent access, use Qdrant server instead."
+        #     )
 
     def _save(self) -> None:
         if not self.persistent:
@@ -232,9 +233,7 @@ class QdrantLocal(QdrantBase):
         **kwargs: Any,
     ) -> types.SearchMatrixOffsetsResponse:
         collection = self._get_collection(collection_name)
-        return collection.search_matrix_offsets(
-            query_filter=query_filter, limit=limit, sample=sample, using=using
-        )
+        return collection.search_matrix_offsets(query_filter=query_filter, limit=limit, sample=sample, using=using)
 
     def search_matrix_pairs(
         self,
@@ -246,9 +245,7 @@ class QdrantLocal(QdrantBase):
         **kwargs: Any,
     ) -> types.SearchMatrixPairsResponse:
         collection = self._get_collection(collection_name)
-        return collection.search_matrix_pairs(
-            query_filter=query_filter, limit=limit, sample=sample, using=using
-        )
+        return collection.search_matrix_pairs(query_filter=query_filter, limit=limit, sample=sample, using=using)
 
     def search_groups(
         self,
@@ -307,11 +304,7 @@ class QdrantLocal(QdrantBase):
         collection = self._get_collection(lookup_collection_name)
 
         search_in_vector_name = using if using is not None else DEFAULT_VECTOR_NAME
-        vector_name = (
-            lookup_from.vector
-            if lookup_from is not None and lookup_from.vector is not None
-            else search_in_vector_name
-        )
+        vector_name = lookup_from.vector if lookup_from is not None and lookup_from.vector is not None else search_in_vector_name
 
         sparse = vector_name in collection.sparse_vectors
         multi = vector_name in collection.multivectors
@@ -352,21 +345,13 @@ class QdrantLocal(QdrantBase):
 
         elif isinstance(query, rest_models.RecommendQuery):
             if query.recommend.negative is not None:
-                query.recommend.negative = [
-                    input_into_vector(vector_input) for vector_input in query.recommend.negative
-                ]
+                query.recommend.negative = [input_into_vector(vector_input) for vector_input in query.recommend.negative]
             if query.recommend.positive is not None:
-                query.recommend.positive = [
-                    input_into_vector(vector_input) for vector_input in query.recommend.positive
-                ]
+                query.recommend.positive = [input_into_vector(vector_input) for vector_input in query.recommend.positive]
 
         elif isinstance(query, rest_models.DiscoverQuery):
             query.discover.target = input_into_vector(query.discover.target)
-            pairs = (
-                query.discover.context
-                if isinstance(query.discover.context, list)
-                else [query.discover.context]
-            )
+            pairs = query.discover.context if isinstance(query.discover.context, list) else [query.discover.context]
             query.discover.context = [
                 rest_models.ContextPair(
                     positive=input_into_vector(pair.positive),
@@ -403,21 +388,13 @@ class QdrantLocal(QdrantBase):
         prefetches = []
         if isinstance(prefetch, types.Prefetch):
             prefetches = [prefetch]
-            prefetches.extend(
-                prefetch.prefetch if isinstance(prefetch.prefetch, list) else [prefetch.prefetch]
-            )
+            prefetches.extend(prefetch.prefetch if isinstance(prefetch.prefetch, list) else [prefetch.prefetch])
         elif isinstance(prefetch, Sequence):
             prefetches = list(prefetch)
 
-        return [
-            self._resolve_prefetch_input(prefetch, collection_name)
-            for prefetch in prefetches
-            if prefetch is not None
-        ]
+        return [self._resolve_prefetch_input(prefetch, collection_name) for prefetch in prefetches if prefetch is not None]
 
-    def _resolve_prefetch_input(
-        self, prefetch: types.Prefetch, collection_name: str
-    ) -> types.Prefetch:
+    def _resolve_prefetch_input(self, prefetch: types.Prefetch, collection_name: str) -> types.Prefetch:
         if prefetch.query is None:
             return prefetch
 
@@ -455,9 +432,7 @@ class QdrantLocal(QdrantBase):
         collection = self._get_collection(collection_name)
 
         if query is not None:
-            query, mentioned_ids = self._resolve_query_input(
-                collection_name, query, using, lookup_from
-            )
+            query, mentioned_ids = self._resolve_query_input(collection_name, query, using, lookup_from)
             query_filter = ignore_mentioned_ids_filter(query_filter, list(mentioned_ids))
 
         prefetch = self._resolve_prefetches_input(prefetch, collection_name)
@@ -528,9 +503,7 @@ class QdrantLocal(QdrantBase):
     ) -> types.GroupsResult:
         collection = self._get_collection(collection_name)
         if query is not None:
-            query, mentioned_ids = self._resolve_query_input(
-                collection_name, query, using, lookup_from
-            )
+            query, mentioned_ids = self._resolve_query_input(collection_name, query, using, lookup_from)
             query_filter = ignore_mentioned_ids_filter(query_filter, list(mentioned_ids))
         with_lookup_collection = None
         if with_lookup is not None:
@@ -573,12 +546,8 @@ class QdrantLocal(QdrantBase):
                 with_vectors=request.with_vector,
                 score_threshold=request.score_threshold,
                 using=request.using,
-                lookup_from_collection=self._get_collection(request.lookup_from.collection)
-                if request.lookup_from
-                else None,
-                lookup_from_vector_name=request.lookup_from.vector
-                if request.lookup_from
-                else None,
+                lookup_from_collection=self._get_collection(request.lookup_from.collection) if request.lookup_from else None,
+                lookup_from_vector_name=request.lookup_from.vector if request.lookup_from else None,
                 strategy=request.strategy,
             )
             for request in requests
@@ -612,9 +581,7 @@ class QdrantLocal(QdrantBase):
             with_vectors=with_vectors,
             score_threshold=score_threshold,
             using=using,
-            lookup_from_collection=self._get_collection(lookup_from.collection)
-            if lookup_from
-            else None,
+            lookup_from_collection=self._get_collection(lookup_from.collection) if lookup_from else None,
             lookup_from_vector_name=lookup_from.vector if lookup_from else None,
             strategy=strategy,
         )
@@ -657,9 +624,7 @@ class QdrantLocal(QdrantBase):
             with_vectors=with_vectors,
             score_threshold=score_threshold,
             using=using,
-            lookup_from_collection=self._get_collection(lookup_from.collection)
-            if lookup_from
-            else None,
+            lookup_from_collection=self._get_collection(lookup_from.collection) if lookup_from else None,
             lookup_from_vector_name=lookup_from.vector if lookup_from else None,
             with_lookup=with_lookup,
             with_lookup_collection=with_lookup_collection,
@@ -693,9 +658,7 @@ class QdrantLocal(QdrantBase):
             with_payload=with_payload,
             with_vectors=with_vectors,
             using=using,
-            lookup_from_collection=self._get_collection(lookup_from.collection)
-            if lookup_from
-            else None,
+            lookup_from_collection=self._get_collection(lookup_from.collection) if lookup_from else None,
             lookup_from_vector_name=lookup_from.vector if lookup_from else None,
         )
 
@@ -717,12 +680,8 @@ class QdrantLocal(QdrantBase):
                 with_payload=request.with_payload,
                 with_vectors=request.with_vector,
                 using=request.using,
-                lookup_from_collection=self._get_collection(request.lookup_from.collection)
-                if request.lookup_from
-                else None,
-                lookup_from_vector_name=request.lookup_from.vector
-                if request.lookup_from
-                else None,
+                lookup_from_collection=self._get_collection(request.lookup_from.collection) if request.lookup_from else None,
+                lookup_from_vector_name=request.lookup_from.vector if request.lookup_from else None,
             )
             for request in requests
         ]
@@ -770,9 +729,7 @@ class QdrantLocal(QdrantBase):
         collection = self._get_collection(collection_name)
         return collection.facet(key=key, facet_filter=facet_filter, limit=limit)
 
-    def upsert(
-        self, collection_name: str, points: types.Points, **kwargs: Any
-    ) -> types.UpdateResult:
+    def upsert(self, collection_name: str, points: types.Points, **kwargs: Any) -> types.UpdateResult:
         collection = self._get_collection(collection_name)
         collection.upsert(points)
         return self._default_update_result()
@@ -816,9 +773,7 @@ class QdrantLocal(QdrantBase):
             status=rest_models.UpdateStatus.COMPLETED,
         )
 
-    def delete(
-        self, collection_name: str, points_selector: types.PointsSelector, **kwargs: Any
-    ) -> types.UpdateResult:
+    def delete(self, collection_name: str, points_selector: types.PointsSelector, **kwargs: Any) -> types.UpdateResult:
         collection = self._get_collection(collection_name)
         collection.delete(points_selector)
         return self._default_update_result()
@@ -857,9 +812,7 @@ class QdrantLocal(QdrantBase):
         collection.delete_payload(keys=keys, selector=points)
         return self._default_update_result()
 
-    def clear_payload(
-        self, collection_name: str, points_selector: types.PointsSelector, **kwargs: Any
-    ) -> types.UpdateResult:
+    def clear_payload(self, collection_name: str, points_selector: types.PointsSelector, **kwargs: Any) -> types.UpdateResult:
         collection = self._get_collection(collection_name)
         collection.clear_payload(selector=points_selector)
         return self._default_update_result()
@@ -874,15 +827,11 @@ class QdrantLocal(QdrantBase):
         collection.batch_update_points(update_operations)
         return [self._default_update_result()] * len(update_operations)
 
-    def update_collection_aliases(
-        self, change_aliases_operations: Sequence[types.AliasOperations], **kwargs: Any
-    ) -> bool:
+    def update_collection_aliases(self, change_aliases_operations: Sequence[types.AliasOperations], **kwargs: Any) -> bool:
         for operation in change_aliases_operations:
             if isinstance(operation, rest_models.CreateAliasOperation):
                 self._get_collection(operation.create_alias.collection_name)
-                self.aliases[operation.create_alias.alias_name] = (
-                    operation.create_alias.collection_name
-                )
+                self.aliases[operation.create_alias.alias_name] = operation.create_alias.collection_name
             elif isinstance(operation, rest_models.DeleteAliasOperation):
                 self.aliases.pop(operation.delete_alias.alias_name, None)
             elif isinstance(operation, rest_models.RenameAliasOperation):
@@ -894,9 +843,7 @@ class QdrantLocal(QdrantBase):
         self._save()
         return True
 
-    def get_collection_aliases(
-        self, collection_name: str, **kwargs: Any
-    ) -> types.CollectionsAliasesResponse:
+    def get_collection_aliases(self, collection_name: str, **kwargs: Any) -> types.CollectionsAliasesResponse:
         if self.closed:
             raise RuntimeError("QdrantLocal instance is closed. Please create a new instance.")
 
@@ -930,10 +877,7 @@ class QdrantLocal(QdrantBase):
             raise RuntimeError("QdrantLocal instance is closed. Please create a new instance.")
 
         return types.CollectionsResponse(
-            collections=[
-                rest_models.CollectionDescription(name=name)
-                for name, _ in self.collections.items()
-            ]
+            collections=[rest_models.CollectionDescription(name=name) for name, _ in self.collections.items()]
         )
 
     def get_collection(self, collection_name: str, **kwargs: Any) -> types.CollectionInfo:
@@ -974,11 +918,7 @@ class QdrantLocal(QdrantBase):
 
         _collection = self.collections.pop(collection_name, None)
         del _collection
-        self.aliases = {
-            alias_name: name
-            for alias_name, name in self.aliases.items()
-            if name != collection_name
-        }
+        self.aliases = {alias_name: name for alias_name, name in self.aliases.items() if name != collection_name}
         collection_path = self._collection_path(collection_name)
         if collection_path is not None:
             shutil.rmtree(collection_path, ignore_errors=True)
@@ -988,9 +928,7 @@ class QdrantLocal(QdrantBase):
     def create_collection(
         self,
         collection_name: str,
-        vectors_config: Optional[
-            Union[types.VectorParams, Mapping[str, types.VectorParams]]
-        ] = None,
+        vectors_config: Optional[Union[types.VectorParams, Mapping[str, types.VectorParams]]] = None,
         init_from: Optional[types.InitFrom] = None,
         sparse_vectors_config: Optional[Mapping[str, types.SparseVectorParams]] = None,
         **kwargs: Any,
@@ -1001,9 +939,7 @@ class QdrantLocal(QdrantBase):
         src_collection = None
         from_collection_name = None
         if init_from is not None:
-            from_collection_name = (
-                init_from if isinstance(init_from, str) else init_from.collection
-            )
+            from_collection_name = init_from if isinstance(init_from, str) else init_from.collection
             src_collection = self._get_collection(from_collection_name)
 
         if collection_name in self.collections:
@@ -1025,14 +961,10 @@ class QdrantLocal(QdrantBase):
         if src_collection and from_collection_name:
             batch_size = 100
             records, next_offset = self.scroll(from_collection_name, limit=2, with_vectors=True)
-            self.upload_records(
-                collection_name, records
-            )  # it is not crucial to replace upload_records here
+            self.upload_records(collection_name, records)  # it is not crucial to replace upload_records here
             # since it is an internal usage, and we don't have custom shard keys in qdrant local
             while next_offset is not None:
-                records, next_offset = self.scroll(
-                    from_collection_name, offset=next_offset, limit=batch_size, with_vectors=True
-                )
+                records, next_offset = self.scroll(from_collection_name, offset=next_offset, limit=batch_size, with_vectors=True)
                 self.upload_records(collection_name, records)
 
         self._save()
@@ -1047,18 +979,12 @@ class QdrantLocal(QdrantBase):
         **kwargs: Any,
     ) -> bool:
         self.delete_collection(collection_name)
-        return self.create_collection(
-            collection_name, vectors_config, init_from, sparse_vectors_config
-        )
+        return self.create_collection(collection_name, vectors_config, init_from, sparse_vectors_config)
 
-    def upload_points(
-        self, collection_name: str, points: Iterable[types.PointStruct], **kwargs: Any
-    ) -> None:
+    def upload_points(self, collection_name: str, points: Iterable[types.PointStruct], **kwargs: Any) -> None:
         self._upload_points(collection_name, points)
 
-    def upload_records(
-        self, collection_name: str, records: Iterable[types.Record], **kwargs: Any
-    ) -> None:
+    def upload_records(self, collection_name: str, records: Iterable[types.Record], **kwargs: Any) -> None:
         # upload_records in local mode behaves like upload_records with wait=True in server mode
         self._upload_points(collection_name, records)
 
@@ -1082,9 +1008,7 @@ class QdrantLocal(QdrantBase):
     def upload_collection(
         self,
         collection_name: str,
-        vectors: Union[
-            dict[str, types.NumpyArray], types.NumpyArray, Iterable[types.VectorStruct]
-        ],
+        vectors: Union[dict[str, types.NumpyArray], types.NumpyArray, Iterable[types.VectorStruct]],
         payload: Optional[Iterable[dict[Any, Any]]] = None,
         ids: Optional[Iterable[types.PointId]] = None,
         **kwargs: Any,
@@ -1102,10 +1026,7 @@ class QdrantLocal(QdrantBase):
 
             num_vectors = next(iter(vectors.values())).shape[0]
             # convert dict[str, np.ndarray] to list[dict[str, list[float]]]
-            vectors = [
-                {name: vectors[name][i].tolist() for name in vectors.keys()}
-                for i in range(num_vectors)
-            ]
+            vectors = [{name: vectors[name][i].tolist() for name in vectors.keys()} for i in range(num_vectors)]
 
         collection.upsert(
             [
@@ -1138,9 +1059,7 @@ class QdrantLocal(QdrantBase):
         )
         return self._default_update_result()
 
-    def delete_payload_index(
-        self, collection_name: str, field_name: str, **kwargs: Any
-    ) -> types.UpdateResult:
+    def delete_payload_index(self, collection_name: str, field_name: str, **kwargs: Any) -> types.UpdateResult:
         show_warning_once(
             message="Payload indexes have no effect in the local Qdrant. Please use server Qdrant if you need payload indexes.",
             category=UserWarning,
@@ -1149,14 +1068,10 @@ class QdrantLocal(QdrantBase):
         )
         return self._default_update_result()
 
-    def list_snapshots(
-        self, collection_name: str, **kwargs: Any
-    ) -> list[types.SnapshotDescription]:
+    def list_snapshots(self, collection_name: str, **kwargs: Any) -> list[types.SnapshotDescription]:
         return []
 
-    def create_snapshot(
-        self, collection_name: str, **kwargs: Any
-    ) -> Optional[types.SnapshotDescription]:
+    def create_snapshot(self, collection_name: str, **kwargs: Any) -> Optional[types.SnapshotDescription]:
         raise NotImplementedError(
             "Snapshots are not supported in the local Qdrant. Please use server Qdrant if you need full snapshots."
         )
@@ -1184,21 +1099,15 @@ class QdrantLocal(QdrantBase):
             "Snapshots are not supported in the local Qdrant. Please use server Qdrant if you need full snapshots."
         )
 
-    def list_shard_snapshots(
-        self, collection_name: str, shard_id: int, **kwargs: Any
-    ) -> list[types.SnapshotDescription]:
+    def list_shard_snapshots(self, collection_name: str, shard_id: int, **kwargs: Any) -> list[types.SnapshotDescription]:
         return []
 
-    def create_shard_snapshot(
-        self, collection_name: str, shard_id: int, **kwargs: Any
-    ) -> Optional[types.SnapshotDescription]:
+    def create_shard_snapshot(self, collection_name: str, shard_id: int, **kwargs: Any) -> Optional[types.SnapshotDescription]:
         raise NotImplementedError(
             "Snapshots are not supported in the local Qdrant. Please use server Qdrant if you need snapshots."
         )
 
-    def delete_shard_snapshot(
-        self, collection_name: str, shard_id: int, snapshot_name: str, **kwargs: Any
-    ) -> bool:
+    def delete_shard_snapshot(self, collection_name: str, shard_id: int, snapshot_name: str, **kwargs: Any) -> bool:
         raise NotImplementedError(
             "Snapshots are not supported in the local Qdrant. Please use server Qdrant if you need snapshots."
         )
@@ -1239,9 +1148,7 @@ class QdrantLocal(QdrantBase):
         placement: Optional[list[int]] = None,
         **kwargs: Any,
     ) -> bool:
-        raise NotImplementedError(
-            "Sharding is not supported in the local Qdrant. Please use server Qdrant if you need sharding."
-        )
+        raise NotImplementedError("Sharding is not supported in the local Qdrant. Please use server Qdrant if you need sharding.")
 
     def delete_shard_key(
         self,
@@ -1249,12 +1156,8 @@ class QdrantLocal(QdrantBase):
         shard_key: types.ShardKey,
         **kwargs: Any,
     ) -> bool:
-        raise NotImplementedError(
-            "Sharding is not supported in the local Qdrant. Please use server Qdrant if you need sharding."
-        )
+        raise NotImplementedError("Sharding is not supported in the local Qdrant. Please use server Qdrant if you need sharding.")
 
     def info(self) -> types.VersionInfo:
         version = importlib.metadata.version("qdrant-client")
-        return rest_models.VersionInfo(
-            title="qdrant - vector search engine", version=version, commit=None
-        )
+        return rest_models.VersionInfo(title="qdrant - vector search engine", version=version, commit=None)

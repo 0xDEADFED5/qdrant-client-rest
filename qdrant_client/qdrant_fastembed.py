@@ -6,13 +6,13 @@ from copy import deepcopy
 import numpy as np
 from pydantic import BaseModel
 
-from qdrant_client import grpc
+# from qdrant_client import grpc
 from qdrant_client.common.client_warnings import show_warning
 from qdrant_client.client_base import QdrantBase
 from qdrant_client.embed.model_embedder import ModelEmbedder
 from qdrant_client.http import models
 from qdrant_client.conversions import common_types as types
-from qdrant_client.conversions.conversion import GrpcToRest
+# from qdrant_client.conversions.conversion import GrpcToRest
 from qdrant_client.embed.common import INFERENCE_OBJECT_TYPES
 from qdrant_client.embed.schema_parser import ModelSchemaParser
 from qdrant_client.hybrid.fusion import reciprocal_rank_fusion
@@ -827,7 +827,7 @@ class QdrantFastembedMixin(QdrantBase):
         Raises:
             ValueError: if query is not of supported type
         """
-        if isinstance(query, get_args(types.Query)) or isinstance(query, grpc.Query):
+        if isinstance(query, get_args(types.Query)): #or isinstance(query, grpc.Query):
             return query
 
         if isinstance(query, types.SparseVector):
@@ -839,9 +839,9 @@ class QdrantFastembedMixin(QdrantBase):
             return models.NearestQuery(nearest=query)
 
         if isinstance(query, get_args(types.PointId)):
-            query = (
-                GrpcToRest.convert_point_id(query) if isinstance(query, grpc.PointId) else query
-            )
+            # query = (
+            #     GrpcToRest.convert_point_id(query) if isinstance(query, grpc.PointId) else query
+            # )
             return models.NearestQuery(nearest=query)
 
         if isinstance(query, get_args(INFERENCE_OBJECT_TYPES)):
